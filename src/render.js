@@ -313,6 +313,15 @@ export class Renderer {
 
     // ---- HUD ----
     this.drawHUD();
+    // ---- tide atmosphere: cold violet vignette ----
+    if (g.tideActive) {
+      const pulse = 0.10 + 0.04 * Math.sin(g.time * 2);
+      const vg = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.75);
+      vg.addColorStop(0, 'rgba(80,40,120,0)');
+      vg.addColorStop(1, `rgba(60,25,90,${pulse + 0.12})`);
+      ctx.fillStyle = vg;
+      ctx.fillRect(0, 0, W, H);
+    }
     // ---- toasts ----
     this.drawToasts();
     // ---- menus / overlays ----
@@ -527,6 +536,27 @@ export class Renderer {
     ];
     let yy = y + 54;
     for (const l of lines) { ctx.fillText(l, x + 20, yy); yy += 20; }
+  }
+
+  drawTouchControls(touch, buttons) {
+    const ctx = this.ctx;
+    ctx.globalAlpha = 0.35;
+    if (touch.active) {
+      ctx.strokeStyle = '#e8e2d0'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(touch.ox, touch.oy, 46, 0, Math.PI * 2); ctx.stroke();
+      const dx = touch.cx - touch.ox, dy = touch.cy - touch.oy, l = Math.hypot(dx, dy) || 1;
+      const k = Math.min(l, 40);
+      ctx.fillStyle = '#ffd27a';
+      ctx.beginPath(); ctx.arc(touch.ox + dx / l * k, touch.oy + dy / l * k, 16, 0, Math.PI * 2); ctx.fill();
+    }
+    for (const b of buttons) {
+      ctx.strokeStyle = '#ffd27a'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(b.x, b.y, 34, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = '#e8e2d0'; ctx.font = '12px monospace'; ctx.textAlign = 'center';
+      ctx.fillText(b.label, b.x, b.y + 4);
+    }
+    ctx.textAlign = 'left';
+    ctx.globalAlpha = 1;
   }
 
   drawMinimap() {

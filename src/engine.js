@@ -469,7 +469,11 @@ export class Game {
       p.facing = my < -0.3 ? 'up' : my > 0.3 ? 'down' : p.facing === 'up' || p.facing === 'down' ? p.facing : 'side';
       p.animT += dt;
       p.stepT = (p.stepT || 0) + dt;
-      if (p.stepT > 0.34) { p.stepT = 0; this.sfx('step'); }
+      if (p.stepT > 0.34) {
+        p.stepT = 0; this.sfx('step');
+        this.particles.push({ x: p.x + (Math.random() - 0.5) * 0.3, y: p.y + 0.3,
+          vx: -mx * 0.5, vy: -0.2, life: 0.35, max: 0.35, color: '#3a342a', size: 1 });
+      }
     }
     if (p.invuln > 0) p.invuln -= dt;
     if (p.flashCd > 0) p.flashCd -= dt;

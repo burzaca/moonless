@@ -9,7 +9,11 @@ import { SFX } from './audio.js';
 const canvas = document.getElementById('game');
 
 const meta = loadMeta() || defaultMeta();
-const seed = (Date.now() ^ (Math.random() * 0xffffffff)) >>> 0;
+const params = new URLSearchParams(location.search);
+let seed;
+if (params.get('seed')) seed = (parseInt(params.get('seed'), 10) >>> 0);
+else if (params.get('daily')) { const d = new Date(); seed = (d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate()) >>> 0; }
+else seed = (Date.now() ^ (Math.random() * 0xffffffff)) >>> 0;
 const game = new Game(meta, seed);
 game.setEntities(entities);
 game._sfx = (n) => SFX.play(n);
@@ -17,6 +21,58 @@ const renderer = new Renderer(canvas, game);
 window.MOON = game; // debug handle
 
 const input = { left: false, right: false, up: false, down: false };
+
+// ---------- touch controls (virtual joystick + action buttons) ----------
+const isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+const touch = { active: false, ox: 0, oy: 0, cx: 0, cy: 0, id: null };
+const TOUCH_BUTTONS = [
+  { key: 'E', label: 'act', dx: -110, dy: -20 },
+  { key: 'SPACE', label: 'flash', dx: -30, dy: -95 },
+  { key: 'B', label: 'beacon', dx: -190, dy: -95 },
+];
+function buttonPositions() {
+  const W = canvas.width, H = canvas.height;
+  return TOUCH_BUTTONS.map(b => ({ ...b, x: W + b.dx, y: H + b.dy }));
+}
+if (isTouch) {
+  canvas.addEventListener('touchstart', (e) => {
+    if (game.mode === 'title') { startPlaying(); return; }
+    if (game.mode === 'dead') { game.respawn(); saveMeta(game.meta); return; }
+    if (game.mode === 'dawn') { game.mode = 'play'; return; }
+    for (const t of e.changedTouches) {
+      const btn = buttonPositions().find(b => Math.hypot(t.clientX - b.x, t.clientY - b.y) < 45);
+      if (btn) {
+        if (btn.key === 'E') game.interact();
+        else if (btn.key === 'SPACE') game.flash();
+        else if (btn.key === 'B') game.placeBeacon();
+        continue;
+      }
+      if (!touch.active && t.clientX < window.innerWidth * 0.55) {
+        touch.active = true; touch.id = t.identifier;
+        touch.ox = touch.cx = t.clientX; touch.oy = touch.cy = t.clientY;
+      }
+    }
+    e.preventDefault();
+  }, { passive: false });
+  canvas.addEventListener('touchmove', (e) => {
+    for (const t of e.changedTouches) {
+      if (t.identifier === touch.id) { touch.cx = t.clientX; touch.cy = t.clientY; }
+    }
+    e.preventDefault();
+  }, { passive: false });
+  canvas.addEventListener('touchend', (e) => {
+    for (const t of e.changedTouches) {
+      if (t.identifier === touch.id) { touch.active = false; touch.id = null; }
+    }
+  });
+}
+function applyTouchInput() {
+  input.left = input.right = input.up = input.down = false;
+  if (!touch.active) return;
+  const dx = touch.cx - touch.ox, dy = touch.cy - touch.oy;
+  if (Math.hypot(dx, dy) < 18) return;
+  input.left = dx < -10; input.right = dx > 10; input.up = dy < -10; input.down = dy > 10;
+}
 
 function startPlaying() {
   game.mode = 'play';
@@ -105,8 +161,10 @@ function loop(now) {
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
   game.time += game.mode === 'title' ? dt : 0;
+  if (isTouch) applyTouchInput();
   game.update(dt, input);
   renderer.frame(dt);
+  if (isTouch && game.mode === 'play') renderer.drawTouchControls(touch, buttonPositions());
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
