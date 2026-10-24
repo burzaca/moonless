@@ -25,18 +25,18 @@ export const MOBS = {
     flavor: 'Rags of someone who stayed out too long. It drinks the oil from your lantern like a memory.',
   },
   king_stag: {
-    name: 'Stag of Cinders', hp: 900, speed: 3.4, dmg: 22, boss: true, kindling: 25,
-    drops: { tallow: [10, 16] }, radius: 12, behavior: 'hunt', tier: 2,
+    name: 'Stag of Cinders', hp: 350, speed: 3.4, dmg: 22, boss: true, kindling: 25,
+    drops: { tallow: [10, 16] }, radius: 12, behavior: 'hunt', tier: 2, burnWeak: 1.5,
     flavor: 'Once it carried the dawn across the fields on its antlers. Now the antlers smoulder and the dawn is gone.',
   },
   king_choir: {
-    name: 'The Drowned Choir', hp: 1400, speed: 1.9, dmg: 18, boss: true, kindling: 35,
-    drops: { tallow: [12, 20] }, radius: 14, behavior: 'drift', drainsOil: 3, tier: 2,
+    name: 'The Drowned Choir', hp: 550, speed: 1.9, dmg: 18, boss: true, kindling: 35,
+    drops: { tallow: [12, 20] }, radius: 14, behavior: 'drift', drainsOil: 3, tier: 2, burnWeak: 1.5,
     flavor: 'Samodivi who sang the moon to sleep each night. The salt took their voices. They still try.',
   },
   king_hollow: {
-    name: 'Hollowking', hp: 2400, speed: 2.6, dmg: 30, boss: true, kindling: 60,
-    drops: { tallow: [20, 30] }, radius: 16, behavior: 'hunt', tier: 2,
+    name: 'Hollowking', hp: 900, speed: 2.6, dmg: 30, boss: true, kindling: 60,
+    drops: { tallow: [20, 30] }, radius: 16, behavior: 'hunt', tier: 2, burnWeak: 1.5,
     flavor: 'A crown with nothing beneath it. It ate the moon, and it is still hungry.',
   },
 };
@@ -52,7 +52,7 @@ export const UPGRADES = [
   {
     id: 'lantern_burn', name: 'Hotter Wick', cost: 10, costGrowth: 1.5, maxLevel: 5,
     desc: 'Braid the wick with ember-thread. Your light burns Umbral things 20% harder per level.',
-    effect: { burnDps: 0.2 },
+    effect: { burnDps: 0.35 },
   },
   {
     id: 'oil_tank', name: 'Deeper Reservoir', cost: 6, costGrowth: 1.45, maxLevel: 6,

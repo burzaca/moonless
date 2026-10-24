@@ -9,9 +9,9 @@ import {
 } from './entities.js';
 
 const BASE = {
-  hp: 20, speed: 4.2, oil: 60, burn: 1.2,
+  hp: 30, speed: 4.2, oil: 60, burn: 1.2,
   lightRadius: 6, burnDps: 6,
-  flashDmg: 8, flashRadius: 4, flashCost: 8, flashCd: 6,
+  flashDmg: 12, flashRadius: 4, flashCost: 8, flashCd: 5,
   beaconCap: 1, cauldronYield: 3,
   calmTime: 210, tideTime: 60,
 };
@@ -31,7 +31,8 @@ export class LightField {
       for (let tx = x0; tx <= x1; tx++) {
         const d = Math.hypot(tx + 0.5 - x, ty + 0.5 - y);
         if (d > radius) continue;
-        let v = strength * (1 - d / radius);
+        // flat-core falloff: full intensity to ~74% of radius, then linear to zero
+        let v = strength * Math.min(1, 1.35 * (1 - d / radius));
         if (v <= 0) continue;
         if (blocksSight(world, tx, ty) && !this._los(x, y, tx + 0.5, ty + 0.5)) v *= 0.15;
         const idx = ty * world.W + tx;
@@ -276,7 +277,14 @@ export class Game {
     const r = BASE.flashRadius + this.upSum('flashRadius') + this.relicVal('flashRadius');
     const dmg = BASE.flashDmg * (1 + this.upSum('flashDmg'));
     for (const m of this.run.mobs) {
-      if (dist(m, p) <= r) { this.hurtMob(m, dmg, true); m.stagger = 0.8; }
+      if (dist(m, p) <= r) {
+        this.hurtMob(m, dmg, true);
+        m.stagger = m.def.boss ? 0.5 : 0.8;
+        // knockback: small things fly, Kings only stagger — but every bit of distance is breathing room
+        const kb = m.def.boss ? 0.9 : 2.5;
+        const dx = m.x - p.x, dy = m.y - p.y, l = Math.hypot(dx, dy) || 1;
+        this._ent.moveCircle(this.world, m, (dx / l) * kb, (dy / l) * kb);
+      }
     }
     spark(this, p.x, p.y, '#fff2c0', 26, 5, 0.5);
     this.shake = 0.25;
