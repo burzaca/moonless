@@ -88,7 +88,7 @@ function fight(kingKind, upgrades, relics, seed = 42) {
       // approach the RING, not the King itself
       goal = { x: king.x - (dx / d) * want, y: king.y - (dy / d) * want };
     } else if (d < want - 2) {
-      goal = { x: p.x - dx, y: p.y - dy };         // back off
+      goal = { x: p.x - dx, y: p.y - dy };         // back AWAY from the King
     } else {
       // ORBIT: strafe tangentially so the King chases us around inside our light
       const sgn = ((dx > 0) === (dy > 0)) ? 1 : -1;

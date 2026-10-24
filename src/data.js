@@ -25,7 +25,7 @@ export const MOBS = {
     flavor: 'Rags of someone who stayed out too long. It drinks the oil from your lantern like a memory.',
   },
   king_stag: {
-    name: 'Stag of Cinders', hp: 350, speed: 3.4, dmg: 22, boss: true, kindling: 25,
+    name: 'Stag of Cinders', hp: 350, speed: 3.0, dmg: 22, boss: true, kindling: 25,
     drops: { tallow: [10, 16] }, radius: 12, behavior: 'hunt', tier: 2, burnWeak: 1.5,
     flavor: 'Once it carried the dawn across the fields on its antlers. Now the antlers smoulder and the dawn is gone.',
   },

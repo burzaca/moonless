@@ -107,7 +107,7 @@ export function updateMob(m, dt, game) {
 
   // attack
   if (d < 0.75 && m.cd <= 0 && m.stagger <= 0) {
-    m.cd = def.boss ? 1.6 : 1.0;
+    m.cd = def.boss ? 2.0 : 1.0;
     game.damagePlayer(def.dmg, m);
     if (def.drainsOil) game.drainOil(def.drainsOil);
   }
