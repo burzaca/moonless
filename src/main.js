@@ -1,0 +1,111 @@
+// MOONLESS — bootstrap: input, loop, menus, save hooks.
+
+import { Game } from './engine.js';
+import { Renderer } from './render.js';
+import * as entities from './entities.js';
+import { loadMeta, saveMeta, defaultMeta, wipeMeta } from './save.js';
+import { SFX } from './audio.js';
+
+const canvas = document.getElementById('game');
+
+const meta = loadMeta() || defaultMeta();
+const seed = (Date.now() ^ (Math.random() * 0xffffffff)) >>> 0;
+const game = new Game(meta, seed);
+game.setEntities(entities);
+game._sfx = (n) => SFX.play(n);
+const renderer = new Renderer(canvas, game);
+
+const input = { left: false, right: false, up: false, down: false };
+
+function startPlaying() {
+  game.mode = 'play';
+  game.toast('You wake at the Hollow. The lantern is lit. For now.', 'lore');
+  SFX.startAmbient();
+}
+
+function buyUpgrade(entry) {
+  const { u, cost, maxed } = entry;
+  if (maxed || game.meta.kindling < cost) { game.sfx('ui_click'); return; }
+  game.meta.kindling -= cost;
+  game.meta.upgrades[u.id] = (game.meta.upgrades[u.id] || 0) + 1;
+  game.sfx('upgrade');
+  game.toast(`The Altar accepts. ${u.name} strengthened.`, 'kindling');
+  saveMeta(game.meta);
+}
+
+function merchantTrade(n) {
+  const p = game.player;
+  if (n === 1 && p.tallow >= 3) { p.tallow -= 3; game.addOil(12); game.sfx('pickup'); game.toast('The merchant renders your tallow. +12 oil.', 'good'); }
+  else if (n === 2 && p.tallow >= 6) { p.tallow -= 6; game.addKindling(1, 'merchant trade'); }
+  else { game.sfx('ui_click'); game.toast('"Bring more tallow, friend."', 'info'); }
+}
+
+window.addEventListener('keydown', (e) => {
+  const k = e.key.toLowerCase();
+  if (game.mode === 'title') { startPlaying(); return; }
+  if (game.mode === 'dead' && (k === 'enter')) { game.respawn(); saveMeta(game.meta); return; }
+  if (game.mode === 'dawn' && (k === 'enter')) { game.mode = 'play'; return; }
+
+  if (game.ui.altar) {
+    if (k === 'escape') { game.ui.altar = false; game.sfx('ui_click'); return; }
+    const n = parseInt(k, 10);
+    if (n >= 1 && game.ui.altarList && game.ui.altarList[n - 1]) buyUpgrade(game.ui.altarList[n - 1]);
+    return;
+  }
+  if (game.ui.merchant) {
+    if (k === 'escape') { game.ui.merchant = false; return; }
+    if (k === '1' || k === '2') merchantTrade(parseInt(k, 10));
+    return;
+  }
+
+  if (k === 'a' || k === 'arrowleft') input.left = true;
+  if (k === 'd' || k === 'arrowright') input.right = true;
+  if (k === 'w' || k === 'arrowup') input.up = true;
+  if (k === 's' || k === 'arrowdown') input.down = true;
+  if (k === 'e') game.interact();
+  if (k === ' ') { e.preventDefault(); game.flash(); }
+  if (k === 'b') game.placeBeacon();
+  if (k === 'r') {
+    const near = game.run.beacons.some(b => Math.hypot(b.x - game.player.x, b.y - game.player.y) < 1.8);
+    const atHub = game.inHub() && Math.hypot(game.hubProps.cauldron.x - game.player.x, game.hubProps.cauldron.y - game.player.y) < 2.2;
+    if (atHub) game.renderTallow(false);
+    else if (near) game.renderTallow(true);
+    else game.toast('Render only at the cauldron or a lit beacon.', 'bad');
+  }
+  if (k === 'q') game.cycleFocus();
+  if (k === 'h') game.ui.help = !game.ui.help;
+  if (k === 'm') game.ui.minimap = !game.ui.minimap;
+  if (k === 'escape') { game.ui.help = false; game.ui.minimap = false; }
+  // merchant opens if saved and near banner area
+  if (k === 't' && game.meta.npcsSaved.includes('merchant') && game.inHub()) { game.ui.merchant = true; game.sfx('ui_open'); }
+});
+
+window.addEventListener('keyup', (e) => {
+  const k = e.key.toLowerCase();
+  if (k === 'a' || k === 'arrowleft') input.left = false;
+  if (k === 'd' || k === 'arrowright') input.right = false;
+  if (k === 'w' || k === 'arrowup') input.up = false;
+  if (k === 's' || k === 'arrowdown') input.down = false;
+});
+
+// flip player sprite by last horizontal direction
+let lastMx = 1;
+window.addEventListener('keydown', (e) => {
+  const k = e.key.toLowerCase();
+  if (k === 'a') { lastMx = -1; game.player._flip = -1; }
+  if (k === 'd') { lastMx = 1; game.player._flip = 1; }
+});
+
+// autosave periodically
+setInterval(() => { if (game.mode !== 'title') saveMeta(game.meta); }, 15000);
+
+let last = performance.now();
+function loop(now) {
+  const dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  game.time += game.mode === 'title' ? dt : 0;
+  game.update(dt, input);
+  renderer.frame(dt);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);

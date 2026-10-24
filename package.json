@@ -1,0 +1,10 @@
+{
+  "name": "moonless",
+  "version": "0.1.0",
+  "description": "MOONLESS - a dark-sandbox incremental roguelike. Vanilla JS, zero dependencies.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/",
+    "sim": "node tools/simulate.js"
+  }
+}
