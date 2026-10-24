@@ -111,3 +111,17 @@ test('whisper returns a string or null in all contexts without throwing', () => 
   g.player.oil = 5; g.player.x = g.world.hub.x; g.player.y = g.world.hub.y + 40;
   assert.match(g.whisper(), /Oil runs low/);
 });
+
+test('achievements unlock on the right events and persist in meta', () => {
+  const g = new Game(defaultMeta(), 5);
+  g.setEntities(entities);
+  g.mode = 'play';
+  g.checkAchievements();
+  assert.ok(g.meta.achievements.includes('spark') === false);
+  g.addKindling(5, 'test');
+  g.checkAchievements();
+  assert.ok(g.meta.achievements.includes('spark'), 'spark unlocked by kindling');
+  const before = g.meta.achievements.length;
+  g.checkAchievements();
+  assert.equal(g.meta.achievements.length, before, 'no duplicate unlocks');
+});

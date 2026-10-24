@@ -2,7 +2,7 @@
 
 import { T } from './rng.js';
 import { getSprite } from './sprites.js';
-import { UPGRADES } from './data.js';
+import { UPGRADES, ACHIEVEMENTS } from './data.js';
 
 const S = 3;               // pixel scale
 const TS = 16 * S;         // tile size on screen
@@ -340,6 +340,7 @@ export class Renderer {
     if (g.ui.altar) this.drawAltarMenu();
     if (g.ui.merchant) this.drawMerchantMenu();
     if (g.ui.help) this.drawHelp();
+    if (g.ui.achievements) this.drawAchievements();
     if (g.mode === 'dead') this.drawDeath();
     if (g.mode === 'dawn') this.drawDawn();
     if (g.ui.minimap) this.drawMinimap();
@@ -392,7 +393,7 @@ export class Renderer {
       (inc > 0 ? `   +${inc.toFixed(2)} oil/s` : ''), pad + 2, pad + 20 + bh + 32);
     // whisper: one contextual hint, bottom center, subtle
     const wh = g.whisper();
-    if (wh && !g.ui.altar && !g.ui.merchant && !g.ui.help && !g.ui.dialogue) {
+    if (wh && !g.ui.altar && !g.ui.merchant && !g.ui.help && !g.ui.dialogue && !g.ui.achievements) {
       const CW = ctx.canvas.width, CH = ctx.canvas.height;
       ctx.save();
       ctx.textAlign = 'center';
@@ -462,6 +463,8 @@ export class Renderer {
     ctx.font = '12px monospace';
     ctx.fillText('WASD move · E interact · SPACE flash · B beacon · R render · Q focus · H help · M map', W / 2, H * 0.62);
     ctx.fillText(`seed ${this.game.seed} · a night-build by Anakin`, W / 2, H * 0.66);
+    const ach = (this.game.meta.achievements || []).length;
+    if (ach > 0) ctx.fillText(`achievements ${ach}/${ACHIEVEMENTS.length}`, W / 2, H * 0.70);
     ctx.textAlign = 'left';
   }
 
@@ -542,6 +545,26 @@ export class Renderer {
     ctx.fillText(`you carry: ${g.player.tallow} tallow`, x + 20, y + 160);
   }
 
+  drawAchievements() {
+    const ctx = this.ctx, W = ctx.canvas.width;
+    const g = this.game;
+    const owned = g.meta.achievements || [];
+    const w = 560, h = 60 + ACHIEVEMENTS.length * 26, x = (W - w) / 2, y = Math.max(30, (ctx.canvas.height - h) / 2);
+    this.panel(x, y, w, h);
+    ctx.fillStyle = '#ffd27a'; ctx.font = 'bold 16px monospace';
+    ctx.fillText(`ACHIEVEMENTS  ${owned.length}/${ACHIEVEMENTS.length}`, x + 20, y + 28);
+    ctx.font = '13px monospace';
+    let yy = y + 54;
+    for (const a of ACHIEVEMENTS) {
+      const has = owned.includes(a.id);
+      ctx.fillStyle = has ? '#ffd27a' : '#4a463c';
+      ctx.fillText(has ? '★' : '☆', x + 20, yy);
+      ctx.fillStyle = has ? '#cfc8b8' : '#5a564c';
+      ctx.fillText(`${a.name} — ${a.desc}`, x + 42, yy);
+      yy += 26;
+    }
+  }
+
   drawHelp() {
     const ctx = this.ctx, W = ctx.canvas.width;
     const w = 560, h = 330, x = (W - w) / 2, y = 80;
@@ -556,7 +579,7 @@ export class Renderer {
       'R — render carried tallow into oil (at cauldron or lit beacon)',
       'Q — cycle lantern focus (unlock at the Altar):',
       '    WHITE steady · RED burns harder · BLUE slows the dark · GOLD uncovers caches',
-      'M — map   H — this help   ESC — close menus',
+      'M — map   H — this help   P — achievements   ESC — close menus',
       '',
       'Your light burns Umbral things that touch it. Oil feeds the flame;',
       'the deep dark burns oil faster. At zero oil, the Umbral starts taking you.',

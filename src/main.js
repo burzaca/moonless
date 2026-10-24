@@ -131,8 +131,9 @@ window.addEventListener('keydown', (e) => {
   }
   if (k === 'q') game.cycleFocus();
   if (k === 'h') game.ui.help = !game.ui.help;
+  if (k === 'p') game.ui.achievements = !game.ui.achievements;
   if (k === 'm') game.ui.minimap = !game.ui.minimap;
-  if (k === 'escape') { game.ui.help = false; game.ui.minimap = false; }
+  if (k === 'escape') { game.ui.help = false; game.ui.minimap = false; game.ui.achievements = false; }
   // merchant opens if saved and near banner area
   if (k === 't' && game.meta.npcsSaved.includes('merchant') && game.inHub()) { game.ui.merchant = true; game.sfx('ui_open'); }
 });

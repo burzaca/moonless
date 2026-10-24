@@ -272,3 +272,18 @@ export const TIPS = [
   'Every shrine, grove and spring you find gives a spark of Kindling the first time.',
   'The Kings wait at the edges of the world. Do not go to them small.',
 ];
+
+export const ACHIEVEMENTS = [
+  { id: 'first_light', name: 'First Light', desc: 'Discover your first landmark', test: (g) => g.run.discovered.size >= 1 },
+  { id: 'spark', name: 'Spark', desc: 'Earn your first Kindling', test: (g) => g.meta.totalKindling >= 1 },
+  { id: 'beacon_1', name: 'A Pole in the Dark', desc: 'Plant your first Beacon', test: (g) => g.run.beaconsPlaced >= 1 },
+  { id: 'tide_watcher', name: 'Tide-Watcher', desc: 'Survive a full Umbral Tide', test: (g) => g.run.tidesSurvived >= 1 || g.meta.tidesSurvived >= 1 },
+  { id: 'soul_saved', name: 'Shepherd of Souls', desc: 'Guide a lost soul home', test: (g) => g.meta.npcsSaved.length >= 1 },
+  { id: 'king_slayer', name: 'Kingbreaker', desc: 'Unmake an Umbral King', test: (g) => g.meta.kingsSlain.length >= 1 },
+  { id: 'dawn', name: 'Dawnbringer', desc: 'Unmake all three Kings', test: (g) => g.meta.kingsSlain.length >= 3 },
+  { id: 'deep_dark', name: 'Deep Dark', desc: 'Survive 30 seconds with no oil', test: (g) => (g.run.darkSurvival || 0) >= 30 },
+  { id: 'trifocus', name: 'Trifocus', desc: 'Unlock all three lantern lenses', test: (g) => g.hasFocus('red') && g.hasFocus('gold') && g.hasFocus('blue') },
+  { id: 'ember_hoarder', name: 'Ember Hoarder', desc: 'Earn 100 lifetime Kindling', test: (g) => g.meta.totalKindling >= 100 },
+  { id: 'constellation', name: 'Constellation', desc: 'Hold 5 beacons at once', test: (g) => g.run.beacons.length >= 5 },
+  { id: 'fifty_light', name: 'Fifty into Light', desc: 'Unmake 50 Umbral things', test: (g) => (g.meta.totalKills || 0) + g.run.kills >= 50 },
+];

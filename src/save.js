@@ -32,6 +32,9 @@ export function defaultMeta() {
     runs: 0,
     bestTierReached: 0,
     totalKindling: 0,
+    totalKills: 0,
+    tidesSurvived: 0,
+    achievements: [],      // ids
     discovered: [],        // landmark types ever seen (for tips/flavor)
   };
 }

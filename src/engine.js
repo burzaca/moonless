@@ -1,8 +1,7 @@
 // MOONLESS — core engine: game state, light field, economy, tide, interactions.
-
 import { makeRng, T } from './rng.js';
 import { generateWorld, isWalkable, blocksSight } from './worldgen.js';
-import { MOBS, UPGRADES, NPCS, RELICS, LANDMARK_TEXT, TIPS } from './data.js';
+import { MOBS, UPGRADES, NPCS, RELICS, LANDMARK_TEXT, TIPS, ACHIEVEMENTS } from './data.js';
 import {
   makeMob, spawnMobsFromWorld, makeDrop, makeBeacon, makeNpc,
   updateMob, updateNpc, updateParticles, spark, dist, lineBlocked, nextId,
@@ -58,7 +57,7 @@ export class Game {
     this.light = new LightField(this.world);
     this.fog = new Uint8Array(this.world.W * this.world.H);
     this.mode = 'title'; // title | play | dead | dawn
-    this.ui = { altar: false, merchant: false, dialogue: null, help: false };
+    this.ui = { altar: false, merchant: false, dialogue: null, help: false, achievements: false };
     this.toasts = [];
     this.particles = [];
     this.time = 0;
@@ -224,6 +223,7 @@ export class Game {
     } else if (t.t <= 0) {
       t.phase = 'calm'; t.t = this.calmTime(); t.warned = false;
       this.run.tidesSurvived++;
+      this.meta.tidesSurvived = (this.meta.tidesSurvived || 0) + 1;
       this.toast('The tide recedes. The light held.', 'good');
     }
   }
@@ -357,6 +357,7 @@ export class Game {
     const idx = this.run.mobs.indexOf(m);
     if (idx >= 0) this.run.mobs.splice(idx, 1);
     this.run.kills++;
+    this.meta.totalKills = (this.meta.totalKills || 0) + 1;
     const def = m.def;
     const bonus = 1 + this.relicVal('tallowBonus') + (this.meta.npcsSaved.includes('child') ? 0.15 : 0);
     const [tmin, tmax] = def.drops.tallow;
@@ -492,9 +493,25 @@ export class Game {
   sfx(name) { if (this._sfx) this._sfx(name); }
 
   // ---------- main update ----------
+  checkAchievements() {
+    if (!this.meta.achievements) this.meta.achievements = [];
+    for (const a of ACHIEVEMENTS) {
+      if (this.meta.achievements.includes(a.id)) continue;
+      let ok = false;
+      try { ok = a.test(this); } catch { ok = false; }
+      if (ok) {
+        this.meta.achievements.push(a.id);
+        this.toast(`Achievement: ${a.name} — ${a.desc}`, 'kindling');
+        this.sfx('kindling');
+      }
+    }
+  }
+
   update(dt, input) {
     if (this.mode !== 'play') return;
     this.time += dt;
+    this._achT = (this._achT || 0) + dt;
+    if (this._achT >= 1) { this._achT = 0; this.checkAchievements(); }
     const p = this.player;
     const menuOpen = this.ui.altar || this.ui.merchant;
 
@@ -540,6 +557,7 @@ export class Game {
     // out-of-light penalties
     const lit = this.light.at(p.x, p.y);
     if (p.oil <= 0 && lit < 0.2 && !this.inHub()) {
+      this.run.darkSurvival = (this.run.darkSurvival || 0) + dt;
       this._umbralTick = (this._umbralTick || 0) + dt;
       if (this._umbralTick >= 1) { this._umbralTick = 0; this.damagePlayer(1, null); this.toast('The Umbral touches you.', 'bad'); }
     }
