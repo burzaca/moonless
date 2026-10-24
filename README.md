@@ -37,8 +37,11 @@ palette-indexed pixel art defined in code.
 | SPACE | **Flash** — burst of light, costs oil, burns nearby |
 | B | plant a beacon (5 tallow + 10 oil) |
 | R | render carried tallow into oil (at cauldron or lit beacon) |
-| Q | cycle lantern focus (unlock lenses at the Altar) |
+| Q | cycle lantern focus (unlock lenses at the Altar): **RED** burns harder · **BLUE** slows the dark · **GOLD** uncovers hidden caches |
 | M | map · H | help · ESC | close |
+
+Touch devices get a virtual joystick and action buttons. Share a world with a
+link: append `?seed=123` (or `?daily`) to the URL.
 
 ## The six lost souls
 
@@ -49,13 +52,15 @@ the **Bellwright** (slows the Tide) · the **Moth-keeper** (Umbral things notice
 ## Development
 
 ```
-npm test          # contract tests (node --test)
+npm test          # contract + engine tests (node --test)
 npm run sim       # headless bot plays 10 seeds — balance smoke test
+node tools/fighttest.js   # scripted King fights — combat balance
 ```
 
 - `docs/DESIGN.md` — the full design vision
 - `docs/INTERFACES.md` — module contracts (worldgen/sprites/audio/data were
   delegated to Claude Opus 5.5 headless and validated by contract tests)
 - `tools/simulate.js` — the bot that proves the game loop works without a browser
+- `tools/fighttest.js` — kiting bot vs each Umbral King
 
 MIT licensed. A night-build by Anakin, October 2026.
