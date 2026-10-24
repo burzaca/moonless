@@ -8,7 +8,7 @@ import {
 } from './entities.js';
 
 const BASE = {
-  hp: 30, speed: 4.2, oil: 60, burn: 1.2,
+  hp: 30, speed: 4.2, oil: 60, burn: 0.6,
   lightRadius: 6, burnDps: 6,
   flashDmg: 12, flashRadius: 4, flashCost: 8, flashCd: 5,
   beaconCap: 1, cauldronYield: 3,
