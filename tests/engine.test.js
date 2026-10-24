@@ -100,3 +100,14 @@ test('upgrade purchase at altar applies effects', () => {
   g.meta.upgrades.lantern_radius = 1;
   assert.ok(g.lightRadius > r0, 'radius upgrade applies');
 });
+
+test('whisper returns a string or null in all contexts without throwing', () => {
+  const g = new Game(defaultMeta(), 7);
+  g.setEntities(entities);
+  g.mode = 'play';
+  assert.ok(g.whisper() === null || typeof g.whisper() === 'string');
+  g.player.x = g.world.hub.x; g.player.y = g.world.hub.y;
+  assert.equal(typeof g.whisper(), 'string'); // first-run hub hint
+  g.player.oil = 5; g.player.x = g.world.hub.x; g.player.y = g.world.hub.y + 40;
+  assert.match(g.whisper(), /Oil runs low/);
+});

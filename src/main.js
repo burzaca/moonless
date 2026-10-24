@@ -159,14 +159,20 @@ window.addEventListener('pagehide', () => saveMeta(game.meta));
 document.addEventListener('visibilitychange', () => { if (document.hidden && game.mode !== 'title') saveMeta(game.meta); });
 
 let last = performance.now();
+let frameErrors = 0;
 function loop(now) {
-  const dt = Math.min(0.05, (now - last) / 1000);
-  last = now;
-  game.time += game.mode === 'title' ? dt : 0;
-  if (isTouch) applyTouchInput();
-  game.update(dt, input);
-  renderer.frame(dt);
-  if (isTouch && game.mode === 'play') renderer.drawTouchControls(touch, buttonPositions());
+  try {
+    const dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+    game.time += game.mode === 'title' ? dt : 0;
+    if (isTouch) applyTouchInput();
+    game.update(dt, input);
+    renderer.frame(dt);
+    if (isTouch && game.mode === 'play') renderer.drawTouchControls(touch, buttonPositions());
+  } catch (err) {
+    // never let one bad frame kill the game
+    if (++frameErrors <= 3) console.error('frame error', err);
+  }
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);

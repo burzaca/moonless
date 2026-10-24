@@ -393,14 +393,15 @@ export class Renderer {
     // whisper: one contextual hint, bottom center, subtle
     const wh = g.whisper();
     if (wh && !g.ui.altar && !g.ui.merchant && !g.ui.help && !g.ui.dialogue) {
+      const CW = ctx.canvas.width, CH = ctx.canvas.height;
       ctx.save();
       ctx.textAlign = 'center';
       ctx.font = '13px monospace';
       ctx.fillStyle = 'rgba(0,0,0,0.55)';
       const tw = ctx.measureText(wh).width;
-      ctx.fillRect(W / 2 - tw / 2 - 10, H - 46, tw + 20, 24);
+      ctx.fillRect(CW / 2 - tw / 2 - 10, CH - 46, tw + 20, 24);
       ctx.fillStyle = 'rgba(210,200,170,0.75)';
-      ctx.fillText(wh, W / 2, H - 29);
+      ctx.fillText(wh, CW / 2, CH - 29);
       ctx.restore();
       ctx.textAlign = 'left';
     }
