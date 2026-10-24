@@ -352,7 +352,7 @@ export class Game {
     let best = null, bd = 1.8;
     const consider = (obj, kind, label) => {
       const d = dist(obj, p);
-      if (d < bd) { bd = d; best = { ...obj, _kind: kind, _label: label }; }
+      if (d < bd) { bd = d; best = { ref: obj, x: obj.x, y: obj.y, kind, label }; }
     };
     for (const lm of this.world.landmarks) {
       if (lm.type.startsWith('king_')) continue;
@@ -375,11 +375,11 @@ export class Game {
   interact() {
     const it = this.nearestInteractable();
     if (!it) return false;
-    if (it._kind === 'landmark') this.discoverLandmark(it);
-    else if (it._kind === 'npc') this.awakenNpc(it);
-    else if (it._kind === 'cauldron') this.renderTallow(false);
-    else if (it._kind === 'beacon') this.renderTallow(true);
-    else if (it._kind === 'altar') { this.ui.altar = !this.ui.altar; this.sfx('ui_open'); }
+    if (it.kind === 'landmark') this.discoverLandmark(it.ref);
+    else if (it.kind === 'npc') this.awakenNpc(it.ref);
+    else if (it.kind === 'cauldron') this.renderTallow(false);
+    else if (it.kind === 'beacon') this.renderTallow(true);
+    else if (it.kind === 'altar') { this.ui.altar = !this.ui.altar; this.sfx('ui_open'); }
     return true;
   }
 

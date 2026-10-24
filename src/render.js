@@ -302,7 +302,7 @@ export class Renderer {
       const sx = (it.x - cam.x) * TS, sy = (it.y - cam.y) * TS - 22 * S;
       ctx.font = `${10 * S}px monospace`;
       ctx.textAlign = 'center';
-      const label = `[E] ${it._label}`;
+      const label = `[E] ${it.label}`;
       const w = ctx.measureText(label).width + 12;
       ctx.fillStyle = 'rgba(8,9,14,0.85)';
       ctx.fillRect(sx - w / 2, sy - 10 * S, w, 12 * S);
@@ -375,7 +375,9 @@ export class Renderer {
     ctx.font = '12px monospace';
     ctx.fillStyle = '#e8e2d0';
     ctx.fillText(`oil ${Math.floor(g.player.oil)}/${g.oilMax}   hp ${Math.ceil(g.player.hp)}/${g.maxHp}`, pad + 2, pad + 20 + bh + 16);
-    ctx.fillText(`tallow ${g.player.tallow}   kindling ${g.meta.kindling}   beacons ${g.run.beacons.length}/${g.beaconCap}`, pad + 2, pad + 20 + bh + 32);
+    let inc = 0; for (const b of g.run.beacons) inc += b.income;
+    ctx.fillText(`tallow ${g.player.tallow}   kindling ${g.meta.kindling}   beacons ${g.run.beacons.length}/${g.beaconCap}` +
+      (inc > 0 ? `   +${inc.toFixed(2)} oil/s` : ''), pad + 2, pad + 20 + bh + 32);
     ctx.fillText(`focus: ${g.focus.toUpperCase()}   kills ${g.run.kills}   ${g.meta.kingsSlain.length}/3 kings`, pad + 2, pad + 20 + bh + 48);
     // tide clock
     const t = g.tide;
