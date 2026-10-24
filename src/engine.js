@@ -311,7 +311,7 @@ export class Game {
       const cheapest = UPGRADES.filter(u => this.lvl(u.id) < u.maxLevel)
         .map(u => ({ u, cost: u.cost * Math.pow(u.costGrowth, this.lvl(u.id)) }))
         .sort((a, b) => a.cost - b.cost)[0];
-      if (this.meta.runs === 1 && this.run.discovered.size === 0)
+      if (this.meta.runs === 0 && this.run.discovered.size === 0)
         return 'Walk out of the Hollow. The dark is hungry — your light is not.';
       if (cheapest && this.meta.kindling >= cheapest.cost)
         return 'The Ember Altar hungers for Kindling. (E at the altar)';
