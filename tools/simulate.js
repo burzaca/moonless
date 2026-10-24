@@ -52,21 +52,32 @@ export function simulate(seed, maxSeconds = 600, meta = null) {
   g.mode = 'play';
   const input = { left: false, right: false, up: false, down: false };
   const dt = 1 / 60;
-  let target = null, targetKey = null, targetNpc = null, targetDrop = null, npcTry = 0, wp = null, deaths = 0, t = 0, s = 0, lastUx = 0, lastUy = 0;
+  let target = null, targetKey = null, targetNpc = null, targetDrop = null, altarVisit = false, npcTry = 0, wp = null, deaths = 0, t = 0, s = 0, lastUx = 0, lastUy = 0;
   const stats = { survived: 0, deaths: 0 };
 
   while (t < maxSeconds && g.mode !== 'dawn') {
     t += dt; s++;
-    if (g.mode === 'dead') { deaths++; g.respawn(); wp = null; continue; }
+    if (g.mode === 'dead') {
+      deaths++; g.respawn(); wp = null;
+      // after dying, spend Kindling at the altar like a player would
+      const cheapest = UPGRADES_LIST.filter(u => g.lvl(u.id) < u.maxLevel)
+        .map(u => ({ u, cost: Math.round(u.cost * Math.pow(u.costGrowth, g.lvl(u.id))) }))
+        .sort((a, b) => a.cost - b.cost)[0];
+      if (cheapest && g.meta.kindling >= cheapest.cost) {
+        target = { x: g.hubProps.altar.x + 1, y: g.hubProps.altar.y }; targetKey = null; targetNpc = null; targetDrop = null;
+        altarVisit = true;
+      }
+      continue;
+    }
 
     // pick target: nearest undiscovered landmark OR unawakened lost soul, else wander
     if (!target || Math.random() < 0.003) {
       let best = null, bd = 1e9, bestKind = null;
       // tallow/oil drops take priority only when the bot is poor and the drop is close
-      if (g.player.tallow < 5) {
+      if (g.player.tallow < 6) {
         for (const d of g.run.drops) {
           const dd = Math.hypot(d.x - g.player.x, d.y - g.player.y);
-          if (dd < 6 && dd < bd) { bd = dd; best = d; bestKind = 'drop'; }
+          if (dd < 12 && dd < bd) { bd = dd; best = d; bestKind = 'drop'; }
         }
       }
       if (bestKind !== 'drop') {
@@ -97,6 +108,12 @@ export function simulate(seed, maxSeconds = 600, meta = null) {
 
     // drop target expires when collected
     if (targetDrop && !g.run.drops.includes(targetDrop)) { target = null; targetDrop = null; wp = null; }
+
+    // arrived at the altar: open it, then the menu-buy logic below runs
+    if (altarVisit && target) {
+      const dl = Math.hypot(target.x - g.player.x, target.y - g.player.y);
+      if (dl < 2) { g.interact(); altarVisit = false; target = null; wp = null; }
+    }
 
     // arrived at a lost soul: interact repeatedly (task may gate it)
     if (targetNpc) {
@@ -148,7 +165,7 @@ export function simulate(seed, maxSeconds = 600, meta = null) {
     // survival behaviors
     const nearMob = g.run.mobs.some(m => Math.hypot(m.x - g.player.x, m.y - g.player.y) < 3);
     if (nearMob && g.player.oil > 20 && g.player.flashCd <= 0) g.flash();
-    if (g.player.tallow >= 5 && g.run.beacons.length < g.beaconCap && g.player.oil >= 25) g.placeBeacon();
+    if (g.player.tallow >= 5 && g.run.beacons.length < g.beaconCap && g.player.oil >= 20) g.placeBeacon();
     if (g.player.tallow > 0) {
       const atCauldron = Math.hypot(g.hubProps.cauldron.x - g.player.x, g.hubProps.cauldron.y - g.player.y) < 2;
       const atBeacon = g.run.beacons.some(b => Math.hypot(b.x - g.player.x, b.y - g.player.y) < 1.5);
@@ -166,7 +183,7 @@ export function simulate(seed, maxSeconds = 600, meta = null) {
     if (g.ui.altar) {
       for (const u of UPGRADES_LIST) {
         const lvl = g.lvl(u.id);
-        const cost = Math.round(u.cost * Math.pow(1.6, lvl));
+        const cost = Math.round(u.cost * Math.pow(u.costGrowth, lvl));
         if (lvl < u.maxLevel && g.meta.kindling >= cost) {
           g.meta.kindling -= cost;
           g.meta.upgrades[u.id] = lvl + 1;

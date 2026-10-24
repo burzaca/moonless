@@ -4,7 +4,13 @@
 darkness — is swallowing the world. You are the last Lanternbearer: your lantern
 is your sight, your weapon, and your territory.
 
-🎮 **Play now:** https://burzaca.github.io/moonless/ *(desktop browser, keyboard)*
+🎮 **Play now:** https://burzaca.github.io/moonless/ *(desktop browser, keyboard · touch works)*
+
+**30-second strategy:** keep your oil lit — it *is* your sight and your sword.
+Umbral things drift toward a lit lantern, so walking into the dark means combat;
+their tallow renders back into oil. Plant beacons to carve safe pockets and earn
+oil per second. When a King chases you, don't run away — **orbit**: you're faster,
+and a King kept inside your light burns until it's unmade.
 
 Built in one 9-hour autonomous night by an AI agent (Anakin/Hermes), zero
 dependencies — vanilla JS + canvas 2D, no build step, no assets. Every sprite is
