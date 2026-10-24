@@ -172,6 +172,7 @@ function loop(now) {
   } catch (err) {
     // never let one bad frame kill the game
     if (++frameErrors <= 3) console.error('frame error', err);
+    game.frameErrors = frameErrors;
   }
   requestAnimationFrame(loop);
 }
