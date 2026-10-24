@@ -528,6 +528,23 @@ export class Game {
 
     // NPC passives
     p.noticeMul = this.meta.npcsSaved.includes('mothkeeper') ? 0.6 : 1;
+    // Grave-tender: slow mending while you stand in the Hollow
+    if (this.meta.npcsSaved.includes('gravetender') && this.inHub() && p.hp < this.maxHp) {
+      p.hp = Math.min(this.maxHp, p.hp + 1.5 * dt);
+    }
+    // Gold lens: uncovers hidden caches near you
+    if (this.focus === 'gold') {
+      this._goldT = (this._goldT || 0) + dt;
+      if (this._goldT > 6) {
+        this._goldT = 0;
+        const a = Math.random() * Math.PI * 2, r = 3 + Math.random() * 6;
+        const cx = p.x + Math.cos(a) * r, cy = p.y + Math.sin(a) * r;
+        if (isWalkable(this.world, Math.floor(cx), Math.floor(cy))) {
+          this.run.drops.push(makeDrop(Math.random() < 0.7 ? 'tallow' : 'oilflask', cx, cy));
+          spark(this, cx, cy, '#ffd27a', 5, 1.5, 0.6);
+        }
+      }
+    }
 
     // npcs
     for (const n of this.run.npcs) updateNpc(n, dt, this);
