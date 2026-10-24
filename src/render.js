@@ -175,6 +175,7 @@ export class Renderer {
       if (g.fog[Math.floor(hp.cauldron.y) * world.W + Math.floor(hp.cauldron.x)]) {
         this.drawSprite('cauldron', hp.cauldron.x, hp.cauldron.y, cam);
         this.drawSprite('banner', hp.banner.x, hp.banner.y, cam);
+        for (const bz of hp.braziers) this.drawSprite('beacon_lit', bz.x, bz.y, cam);
         this.drawAltar(hp.altar, cam);
       }
     }
@@ -288,7 +289,10 @@ export class Renderer {
       };
       punch(g.player.x, g.player.y, (g.player.oil > 0 ? g.lightRadius : 2) * 1.15, 1);
       for (const b of g.run.beacons) punch(b.x, b.y, b.radius * 1.2, 0.95);
-      if (g.inHub()) punch(g.world.hub.x, g.world.hub.y, (g.world.hub.r + 5) * 1.1, 1);
+      if (g.inHub()) {
+        punch(g.world.hub.x, g.world.hub.y, (g.world.hub.r + 5) * 1.1, 1);
+        for (const bz of g.hubProps.braziers) punch(bz.x, bz.y, 5.5, 0.9);
+      }
       for (const lm of g.world.landmarks) {
         if (lm.type === 'spring' && g.fog[Math.floor(lm.y) * g.world.W + Math.floor(lm.x)]) punch(lm.x + 0.5, lm.y + 0.5, 3.5, 0.5);
       }

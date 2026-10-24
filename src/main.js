@@ -153,8 +153,10 @@ window.addEventListener('keydown', (e) => {
   if (k === 'd') { lastMx = 1; game.player._flip = 1; }
 });
 
-// autosave periodically
+// autosave periodically + on important events
 setInterval(() => { if (game.mode !== 'title') saveMeta(game.meta); }, 15000);
+window.addEventListener('pagehide', () => saveMeta(game.meta));
+document.addEventListener('visibilitychange', () => { if (document.hidden && game.mode !== 'title') saveMeta(game.meta); });
 
 let last = performance.now();
 function loop(now) {

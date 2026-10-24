@@ -146,6 +146,10 @@ export class Game {
       cauldron: { x: w.hub.x + 0.5, y: w.hub.y - 4.5 },
       altar: { x: w.hub.x - 4.5, y: w.hub.y + 0.5 },
       banner: { x: w.hub.x + 4.5, y: w.hub.y + 0.5 },
+      braziers: [
+        { x: w.hub.x - 9.5, y: w.hub.y - 9.5 }, { x: w.hub.x + 9.5, y: w.hub.y - 9.5 },
+        { x: w.hub.x - 9.5, y: w.hub.y + 9.5 }, { x: w.hub.x + 9.5, y: w.hub.y + 9.5 },
+      ],
     };
     if (this.meta.npcsSaved.includes('cartographer')) this.revealRandomFog(30);
   }
@@ -509,7 +513,10 @@ export class Game {
     const lr = p.oil > 0 ? this.lightRadius : 2;
     this.light.add(p.x, p.y, lr, 1);
     for (const b of this.run.beacons) this.light.add(b.x, b.y, b.radius, 0.9);
-    if (this.inHub()) this.light.add(this.world.hub.x, this.world.hub.y, this.world.hub.r + 4, 1);
+    if (this.inHub()) {
+      this.light.add(this.world.hub.x, this.world.hub.y, this.world.hub.r + 4, 1);
+      for (const bz of this.hubProps.braziers) this.light.add(bz.x, bz.y, 4.5, 0.9);
+    }
 
     // fog reveal around player
     this.revealAround(p.x, p.y, lr);
