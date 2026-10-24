@@ -8,20 +8,20 @@ const S = 3;               // pixel scale
 const TS = 16 * S;         // tile size on screen
 
 const TILE_COLORS = {
-  [T.GRASS]:     ['#243326', '#263628', '#223024'],
-  [T.TALLGRASS]: ['#2a3d2c', '#2c402e', '#273a29'],
-  [T.DIRT]:      ['#39332a', '#3c362c', '#363028'],
-  [T.SAND]:      ['#464234', '#4a4637', '#423e31'],
-  [T.WATER]:     ['#152238', '#16253c', '#132034'],
-  [T.ASH]:       ['#25252b', '#28282e', '#222227'],
-  [T.RUIN_FLOOR]:['#2b2b33', '#2e2e36', '#28282f'],
-  [T.RUIN_WALL]: ['#3d3d48', '#40404b', '#393944'],
-  [T.HUB_FLOOR]: ['#3a342b', '#3d372e', '#373129'],
-  [T.HUB_WALL]:  ['#4b4136', '#4e4439', '#473e33'],
-  [T.BRIDGE]:    ['#453728', '#483a2a', '#413426'],
-  [T.PINE]:      ['#15231b', '#17261d', '#132019'],
-  [T.DEADTREE]:  ['#242a24', '#262c26', '#222822'],
-  [T.ROCK]:      ['#33343c', '#36373f', '#303139'],
+  [T.GRASS]:     ['#1d2b1e', '#20301f', '#1a281c'],
+  [T.TALLGRASS]: ['#243a24', '#274026', '#213722'],
+  [T.DIRT]:      ['#33291d', '#372d20', '#2f261b'],
+  [T.SAND]:      ['#4a4432', '#4f4936', '#453f2e'],
+  [T.WATER]:     ['#101d33', '#122139', '#0e1a2e'],
+  [T.ASH]:       ['#232329', '#26262c', '#202026'],
+  [T.RUIN_FLOOR]:['#26262e', '#292931', '#23232b'],
+  [T.RUIN_WALL]: ['#3d3d48', '#42424d', '#383843'],
+  [T.HUB_FLOOR]: ['#3f3628', '#443a2b', '#3a3225'],
+  [T.HUB_WALL]:  ['#57492f', '#5c4e34', '#52442c'],
+  [T.BRIDGE]:    ['#4a3a26', '#4f3f2a', '#453623'],
+  [T.PINE]:      ['#101c15', '#121f17', '#0e1a13'],
+  [T.DEADTREE]:  ['#1e231e', '#212621', '#1b201b'],
+  [T.ROCK]:      ['#31323a', '#34353d', '#2e2f37'],
   [T.VOID]:      ['#05060a'],
 };
 
@@ -122,6 +122,21 @@ export class Renderer {
             const gx = sx + ((h * 977 + i * 37) % TS), gy = sy + ((h * 613 + i * 53) % TS);
             ctx.fillRect(gx, gy, S, S * 2);
           }
+        } else if (t === T.GRASS && h > 0.72) {
+          ctx.fillStyle = '#2c4229';
+          const gx = sx + (h * 911 % (TS - S * 2)) | 0, gy = sy + (h * 577 % (TS - S * 2)) | 0;
+          ctx.fillRect(gx, gy, S, S * 2);
+          ctx.fillRect(gx + S * 2, gy + S, S, S);
+        } else if (t === T.DIRT && h > 0.8) {
+          ctx.fillStyle = '#241c12';
+          ctx.fillRect(sx + (h * 733 % TS) | 0, sy + (h * 397 % TS) | 0, S * 2, S);
+        } else if (t === T.SAND && h > 0.65) {
+          ctx.fillStyle = '#565040';
+          ctx.fillRect(sx + (h * 619 % (TS - S * 3)) | 0, sy + (h * 431 % TS) | 0, S * 3, S);
+        } else if (t === T.HUB_FLOOR) {
+          ctx.fillStyle = '#332b1f';
+          ctx.fillRect(sx, sy + TS - S, TS, S);
+          if (h > 0.6) ctx.fillRect(sx + (h * 823 % TS) | 0, sy, S, TS);
         } else if (t === T.WATER) {
           const ph = Math.sin(g.time * 1.6 + tx * 0.7 + ty * 0.9);
           if (ph > 0.55) { ctx.fillStyle = '#28446b'; ctx.fillRect(sx + TS * 0.2, sy + TS * 0.5, TS * 0.5, S); }
@@ -249,18 +264,36 @@ export class Renderer {
     }
     ctx.globalAlpha = 1;
 
-    // ---- darkness mask from light field ----
-    const maxDark = g.tideActive ? 0.95 : 0.88;
-    for (let ty = Math.max(0, vy0); ty < Math.min(world.H, vy1); ty++) {
-      for (let tx = Math.max(0, vx0); tx < Math.min(world.W, vx1); tx++) {
-        const idx = ty * world.W + tx;
-        if (!g.fog[idx]) continue;
-        const l = g.light.field[idx];
-        const a = (1 - Math.min(1, l)) * maxDark;
-        if (a <= 0.02) continue;
-        ctx.fillStyle = `rgba(4,5,10,${a})`;
-        ctx.fillRect(Math.round((tx - cam.x) * TS), Math.round((ty - cam.y) * TS), TS + 1, TS + 1);
+    // ---- smooth darkness layer with gradient light holes ----
+    {
+      const maxDark = g.tideActive ? 0.96 : 0.9;
+      if (!this.dark || this.dark.width !== W || this.dark.height !== H) {
+        this.dark = document.createElement('canvas');
+        this.dark.width = W; this.dark.height = H;
+        this.dctx = this.dark.getContext('2d');
       }
+      const d = this.dctx;
+      d.clearRect(0, 0, W, H);
+      d.fillStyle = `rgba(3,4,9,${maxDark})`;
+      d.fillRect(0, 0, W, H);
+      d.globalCompositeOperation = 'destination-out';
+      const punch = (wx, wy, radius, strength) => {
+        const cx = (wx - cam.x) * TS, cy = (wy - cam.y) * TS, r = radius * TS;
+        const grad = d.createRadialGradient(cx, cy, r * 0.05, cx, cy, r);
+        grad.addColorStop(0, `rgba(0,0,0,${strength})`);
+        grad.addColorStop(0.55, `rgba(0,0,0,${strength * 0.85})`);
+        grad.addColorStop(1, 'rgba(0,0,0,0)');
+        d.fillStyle = grad;
+        d.beginPath(); d.arc(cx, cy, r, 0, Math.PI * 2); d.fill();
+      };
+      punch(g.player.x, g.player.y, (g.player.oil > 0 ? g.lightRadius : 2) * 1.15, 1);
+      for (const b of g.run.beacons) punch(b.x, b.y, b.radius * 1.2, 0.95);
+      if (g.inHub()) punch(g.world.hub.x, g.world.hub.y, (g.world.hub.r + 5) * 1.1, 1);
+      for (const lm of g.world.landmarks) {
+        if (lm.type === 'spring' && g.fog[Math.floor(lm.y) * g.world.W + Math.floor(lm.x)]) punch(lm.x + 0.5, lm.y + 0.5, 3.5, 0.5);
+      }
+      d.globalCompositeOperation = 'source-over';
+      this.ctx.drawImage(this.dark, 0, 0);
     }
 
     // ---- interact prompt ----

@@ -14,6 +14,7 @@ const game = new Game(meta, seed);
 game.setEntities(entities);
 game._sfx = (n) => SFX.play(n);
 const renderer = new Renderer(canvas, game);
+window.MOON = game; // debug handle
 
 const input = { left: false, right: false, up: false, down: false };
 

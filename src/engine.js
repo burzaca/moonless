@@ -560,6 +560,11 @@ export class Game {
     }
 
     updateParticles(this, dt);
+    // ambient embers drifting off the lantern
+    if (p.oil > 0 && Math.random() < dt * 4) {
+      this.particles.push({ x: p.x + (Math.random() - 0.5) * 0.6, y: p.y - 0.3 + (Math.random() - 0.5) * 0.4,
+        vx: (Math.random() - 0.5) * 0.4, vy: -0.3 - Math.random() * 0.3, life: 1.2, max: 1.2, color: '#8a6a3a', size: 1 });
+    }
     for (const t of this.toasts) t.t += dt;
     this.toasts = this.toasts.filter(t => t.t < t.life);
     if (this.shake > 0) this.shake -= dt;
