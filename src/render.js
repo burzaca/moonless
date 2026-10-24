@@ -382,6 +382,20 @@ export class Renderer {
     let inc = 0; for (const b of g.run.beacons) inc += b.income;
     ctx.fillText(`tallow ${g.player.tallow}   kindling ${g.meta.kindling}   beacons ${g.run.beacons.length}/${g.beaconCap}` +
       (inc > 0 ? `   +${inc.toFixed(2)} oil/s` : ''), pad + 2, pad + 20 + bh + 32);
+    // whisper: one contextual hint, bottom center, subtle
+    const wh = g.whisper();
+    if (wh && !g.ui.altar && !g.ui.merchant && !g.ui.help && !g.ui.dialogue) {
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.font = '13px monospace';
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      const tw = ctx.measureText(wh).width;
+      ctx.fillRect(W / 2 - tw / 2 - 10, H - 46, tw + 20, 24);
+      ctx.fillStyle = 'rgba(210,200,170,0.75)';
+      ctx.fillText(wh, W / 2, H - 29);
+      ctx.restore();
+      ctx.textAlign = 'left';
+    }
     ctx.fillText(`focus: ${g.focus.toUpperCase()}   kills ${g.run.kills}   ${g.meta.kingsSlain.length}/3 kings`, pad + 2, pad + 20 + bh + 48);
     // tide clock
     const t = g.tide;

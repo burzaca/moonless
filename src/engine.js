@@ -302,6 +302,37 @@ export class Game {
     this.toast(`Lantern focus: ${this.focus}.`, 'info');
   }
 
+  // ---------- whisper: one contextual hint at a time ----------
+  whisper() {
+    const p = this.player;
+    if (this.inHub()) {
+      const cheapest = UPGRADES.filter(u => this.lvl(u.id) < u.maxLevel)
+        .map(u => ({ u, cost: u.cost * Math.pow(u.costGrowth, this.lvl(u.id)) }))
+        .sort((a, b) => a.cost - b.cost)[0];
+      if (this.meta.runs === 1 && this.run.discovered.size === 0)
+        return 'Walk out of the Hollow. The dark is hungry — your light is not.';
+      if (cheapest && this.meta.kindling >= cheapest.cost)
+        return 'The Ember Altar hungers for Kindling. (E at the altar)';
+      return null;
+    }
+    if (this.tide.phase === 'tide' && this.tide.t < 20) return 'The Tide is nearly spent — hold your light.';
+    if (this.tide.phase === 'calm' && this.tide.t < 15) return 'The Tide gathers — get to a Beacon or the Hollow.';
+    if (p.oil < 15) {
+      if (p.tallow >= 3) return 'Oil runs low. Render tallow at a cauldron or lit beacon (R).';
+      return 'Oil runs low. Umbral things drop tallow; unmake a few.';
+    }
+    const nearLm = this.world.landmarks.find(lm =>
+      !this.run.discovered.has(lm.type + lm.x + ',' + lm.y) && dist(lm, p) < 4);
+    if (nearLm) return 'Something waits here. (E)';
+    const nearNpc = this.run.npcs.find(n => n.state === 'lost' && dist(n, p) < 4);
+    if (nearNpc) return 'A lost soul. Light it. (E)';
+    if (p.tallow >= 5 && p.oil >= 10 && this.run.beacons.length < this.beaconCap)
+      return 'This ground would hold a Beacon. (B)';
+    if (this.run.kills === 0 && this.run.discovered.size === 0)
+      return 'Your light burns what touches it. Walk into the dark and let them come.';
+    return null;
+  }
+
   // ---------- damage ----------
   damagePlayer(dmg, from) {
     const p = this.player;
