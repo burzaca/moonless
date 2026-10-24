@@ -235,6 +235,8 @@ export class Game {
     this.meta.kindling += n;
     this.meta.totalKindling += n;
     this.run.kindlingEarned += n;
+    this.particles.push({ x: this.player.x, y: this.player.y - 1, vx: 0, vy: -1.2, life: 1.6, max: 1.6,
+      color: '#ffd76a', size: 1, text: `+${n}` });
     this.toast(`+${n} Kindling — ${why}`, 'kindling');
     this.sfx('kindling');
   }
@@ -337,6 +339,7 @@ export class Game {
   damagePlayer(dmg, from) {
     const p = this.player;
     if (p.invuln > 0) return;
+    this.shake = Math.max(this.shake, 0.18);
     p.hp -= dmg;
     p.invuln = 0.4;
     this.shake = Math.max(this.shake, 0.15);
@@ -600,7 +603,10 @@ export class Game {
       const d = this.run.drops[i];
       d.t += dt;
       if (dist(d, p) < 0.8) {
-        if (d.kind === 'tallow') { this.addTallow(1); this.sfx('pickup'); }
+        if (d.kind === 'tallow') {
+          this.addTallow(1); this.sfx('pickup');
+          this.particles.push({ x: d.x, y: d.y - 0.5, vx: 0, vy: -1, life: 1.1, max: 1.1, color: '#e8e2d0', size: 1, text: '+tallow' });
+        }
         else if (d.kind === 'oilflask') { this.addOil(5); this.sfx('pickup'); }
         else if (d.kind === 'kindling') { this.addKindling(1, 'a cold spark'); }
         this.run.drops.splice(i, 1);

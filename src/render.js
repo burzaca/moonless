@@ -259,9 +259,17 @@ export class Renderer {
     // ---- particles ----
     for (const pt of g.particles) {
       const a = Math.max(0, pt.life / pt.max);
-      ctx.fillStyle = pt.color;
       ctx.globalAlpha = a;
-      ctx.fillRect((pt.x - cam.x) * TS, (pt.y - cam.y) * TS, pt.size * S, pt.size * S);
+      if (pt.text) {
+        ctx.font = 'bold 13px monospace';
+        ctx.fillStyle = '#000';
+        ctx.fillText(pt.text, (pt.x - cam.x) * TS + 1, (pt.y - cam.y) * TS + 1);
+        ctx.fillStyle = pt.color;
+        ctx.fillText(pt.text, (pt.x - cam.x) * TS, (pt.y - cam.y) * TS);
+      } else {
+        ctx.fillStyle = pt.color;
+        ctx.fillRect((pt.x - cam.x) * TS, (pt.y - cam.y) * TS, pt.size * S, pt.size * S);
+      }
     }
     ctx.globalAlpha = 1;
 
