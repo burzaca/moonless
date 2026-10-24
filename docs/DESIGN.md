@@ -70,3 +70,21 @@ Procedural pixel art (palette-indexed sprites defined in code, no assets). Dark 
 - **MUST**: worldgen, movement, light/fog, 3 mob types, combat, oil economy, beacons + oil/sec, hub, 2+ NPCs with services, death/run loop, Kindling meta upgrades, save, procedural sprites, HUD.
 - **SHOULD**: tide, 6 NPCs, 3 kings, relics, focus modes, audio, particles.
 - **NICE**: touch controls, achievements, daily seed, balance sim tuning.
+
+---
+
+## What actually shipped (delta from the vision)
+
+Built in one autonomous night, 2026-10-24/25. The vision above held; deltas:
+
+- **Light is the single mechanic**: vision + weapon (burn scales with light
+  intensity, flat-core falloff) + territory (beacons) + economy (oil). The
+  winning loop against Kings is orbiting: keep the slower King inside your
+  light while outrunning it; Flash staggers and knocks back.
+- **Whisper tracker** replaced a quest log: one contextual hint at a time.
+- **Umbral things drift toward a lit lantern** — the only light for miles
+  gives you away. This makes "walk into the dark and let them come" literal.
+- **12 achievements**, P panel; **touch controls**; `?seed=` / `?daily` shared
+  worlds; N mutes the fully-synthesized WebAudio score/SFX.
+- Deliberately NOT built (scope): inventory grid / relics beyond 3 per run,
+  combat classes, multiplayer, mobile-native packaging.
