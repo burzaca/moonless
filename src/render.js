@@ -461,7 +461,7 @@ export class Renderer {
     ctx.fillText('press any key to wake', W / 2, H * 0.55);
     ctx.fillStyle = '#6f6a5c';
     ctx.font = '12px monospace';
-    ctx.fillText('WASD move · E interact · SPACE flash · B beacon · R render · Q focus · H help · M map', W / 2, H * 0.62);
+    ctx.fillText('WASD move · E interact · SPACE flash · B beacon · R render · Q focus · H help · P achievements · M map', W / 2, H * 0.62);
     ctx.fillText(`seed ${this.game.seed} · a night-build by Anakin`, W / 2, H * 0.66);
     const ach = (this.game.meta.achievements || []).length;
     if (ach > 0) ctx.fillText(`achievements ${ach}/${ACHIEVEMENTS.length}`, W / 2, H * 0.70);
@@ -579,7 +579,7 @@ export class Renderer {
       'R — render carried tallow into oil (at cauldron or lit beacon)',
       'Q — cycle lantern focus (unlock at the Altar):',
       '    WHITE steady · RED burns harder · BLUE slows the dark · GOLD uncovers caches',
-      'M — map   H — this help   P — achievements   ESC — close menus',
+      'M — map   H — help   P — achievements   N — sound on/off   ESC — close',
       '',
       'Your light burns Umbral things that touch it. Oil feeds the flame;',
       'the deep dark burns oil faster. At zero oil, the Umbral starts taking you.',

@@ -132,6 +132,10 @@ window.addEventListener('keydown', (e) => {
   if (k === 'q') game.cycleFocus();
   if (k === 'h') game.ui.help = !game.ui.help;
   if (k === 'p') game.ui.achievements = !game.ui.achievements;
+  if (k === 'n') {
+    SFX.setEnabled(!SFX.isEnabled());
+    game.toast(SFX.isEnabled() ? 'Sound on.' : 'Sound off.', 'info');
+  }
   if (k === 'm') game.ui.minimap = !game.ui.minimap;
   if (k === 'escape') { game.ui.help = false; game.ui.minimap = false; game.ui.achievements = false; }
   // merchant opens if saved and near banner area
