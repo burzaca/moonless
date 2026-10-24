@@ -382,8 +382,11 @@ export class Renderer {
     ctx.fillStyle = 'rgba(0,0,0,0.55)';
     ctx.fillRect(pad, pad + 20, bw, bh);
     const oilCol = g.focus === 'blue' ? '#5f8fd4' : g.focus === 'red' ? '#d4674f' : g.focus === 'gold' ? '#d4a94f' : '#d9a441';
+    const lowOil = g.player.oil < g.oilMax * 0.25;
+    if (lowOil) ctx.globalAlpha = 0.55 + 0.45 * Math.abs(Math.sin(g.time * 4));
     ctx.fillStyle = oilCol;
     ctx.fillRect(pad, pad + 20, bw * (g.player.oil / g.oilMax), bh);
+    ctx.globalAlpha = 1;
     ctx.strokeStyle = '#6b5a34'; ctx.strokeRect(pad, pad + 20, bw, bh);
     ctx.font = '12px monospace';
     ctx.fillStyle = '#e8e2d0';
@@ -463,8 +466,10 @@ export class Renderer {
     ctx.font = '12px monospace';
     ctx.fillText('WASD move · E interact · SPACE flash · B beacon · R render · Q focus · H help · P achievements · M map', W / 2, H * 0.62);
     ctx.fillText(`seed ${this.game.seed} · a night-build by Anakin`, W / 2, H * 0.66);
-    const ach = (this.game.meta.achievements || []).length;
-    if (ach > 0) ctx.fillText(`achievements ${ach}/${ACHIEVEMENTS.length}`, W / 2, H * 0.70);
+    const m = this.game.meta;
+    if ((m.runs || 0) > 0 || (m.achievements || []).length > 0) {
+      ctx.fillText(`runs ${m.runs} · kings ${m.kingsSlain.length}/3 · lifetime kindling ${m.totalKindling} · achievements ${(m.achievements || []).length}/${ACHIEVEMENTS.length}`, W / 2, H * 0.70);
+    }
     ctx.textAlign = 'left';
   }
 
