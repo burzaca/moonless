@@ -52,7 +52,7 @@ export function simulate(seed, maxSeconds = 600, meta = null) {
   g.mode = 'play';
   const input = { left: false, right: false, up: false, down: false };
   const dt = 1 / 60;
-  let target = null, targetKey = null, targetNpc = null, npcTry = 0, wp = null, deaths = 0, t = 0, s = 0, lastUx = 0, lastUy = 0;
+  let target = null, targetKey = null, targetNpc = null, targetDrop = null, npcTry = 0, wp = null, deaths = 0, t = 0, s = 0, lastUx = 0, lastUy = 0;
   const stats = { survived: 0, deaths: 0 };
 
   while (t < maxSeconds && g.mode !== 'dawn') {
@@ -62,11 +62,20 @@ export function simulate(seed, maxSeconds = 600, meta = null) {
     // pick target: nearest undiscovered landmark OR unawakened lost soul, else wander
     if (!target || Math.random() < 0.003) {
       let best = null, bd = 1e9, bestKind = null;
-      for (const lm of g.world.landmarks) {
-        const key = lm.type + lm.x + ',' + lm.y;
-        if (g.run.discovered.has(key)) continue;
-        const d = Math.hypot(lm.x - g.player.x, lm.y - g.player.y);
-        if (d < bd) { bd = d; best = lm; bestKind = 'lm'; }
+      // tallow/oil drops take priority only when the bot is poor and the drop is close
+      if (g.player.tallow < 5) {
+        for (const d of g.run.drops) {
+          const dd = Math.hypot(d.x - g.player.x, d.y - g.player.y);
+          if (dd < 6 && dd < bd) { bd = dd; best = d; bestKind = 'drop'; }
+        }
+      }
+      if (bestKind !== 'drop') {
+        for (const lm of g.world.landmarks) {
+          const key = lm.type + lm.x + ',' + lm.y;
+          if (g.run.discovered.has(key)) continue;
+          const d = Math.hypot(lm.x - g.player.x, lm.y - g.player.y);
+          if (d < bd) { bd = d; best = lm; bestKind = 'lm'; }
+        }
       }
       for (const n of g.run.npcs) {
         if (n.state !== 'lost') continue;
@@ -77,18 +86,22 @@ export function simulate(seed, maxSeconds = 600, meta = null) {
           bellwright: r.tidesSurvived >= 1, mothkeeper: r.kills >= 12 })[n.defId] || true;
         if (!ok) continue;
         const d = Math.hypot(n.x - g.player.x, n.y - g.player.y);
-        if (d < bd * 0.8) { bd = d; best = n; bestKind = 'npc'; }
+        if (d < 15 && d < bd) { bd = d; best = n; bestKind = 'npc'; }
       }
-      if (best && bestKind === 'lm') { target = { x: best.x + 0.5, y: best.y + 0.5 }; targetKey = best.type + best.x + ',' + best.y; targetNpc = null; }
-      else if (best && bestKind === 'npc') { target = { x: best.x, y: best.y }; targetKey = null; targetNpc = best; }
+      if (best && bestKind === 'drop') { target = { x: best.x, y: best.y }; targetKey = null; targetNpc = null; targetDrop = best; }
+      else if (best && bestKind === 'lm') { target = { x: best.x + 0.5, y: best.y + 0.5 }; targetKey = best.type + best.x + ',' + best.y; targetNpc = null; }
+      else if (best && bestKind === 'npc') { target = { x: best.x, y: best.y }; targetKey = null; targetNpc = best; npcTry = 0; }
       else { target = { x: g.player.x + (Math.random() - 0.5) * 30, y: g.player.y + (Math.random() - 0.5) * 30 }; targetKey = null; targetNpc = null; }
       wp = null;
     }
 
+    // drop target expires when collected
+    if (targetDrop && !g.run.drops.includes(targetDrop)) { target = null; targetDrop = null; wp = null; }
+
     // arrived at a lost soul: interact repeatedly (task may gate it)
     if (targetNpc) {
       const dl = Math.hypot(targetNpc.x - g.player.x, targetNpc.y - g.player.y);
-      if (targetNpc.state !== 'lost') { target = null; targetNpc = null; wp = null; }
+      if (targetNpc.state !== 'lost' || dl > 25) { target = null; targetNpc = null; wp = null; }
       else if (dl < 1.4) { g.interact(); npcTry++; if (npcTry > 240) { target = null; targetNpc = null; wp = null; } }
     }
 
