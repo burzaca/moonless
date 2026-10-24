@@ -93,6 +93,8 @@ export function updateMob(m, dt, game) {
   if (def.behavior === 'drift') {
     // motes are drawn to light (moth-to-flame): approach player if player lit, burn anyway
     if (m.aggro && litHere < 0.85) approach(world, m, player, dt, def.speed * 0.8 * slow);
+    else if (!m.aggro && game.player.oil > 0 && !game.inHub() && d < sense * 3 &&
+             !lineBlocked(world, m.x, m.y, player.x, player.y)) approach(world, m, player, dt, def.speed * 0.5 * slow);
     else wander(world, m, dt, def.speed * 0.4 * slow);
   } else {
     // hunt, but stalkers fear strong light
@@ -102,6 +104,10 @@ export function updateMob(m, dt, game) {
       moveCircle(world, m, (ax / l) * def.speed * dt, (ay / l) * def.speed * dt);
     } else if (m.aggro) {
       approach(world, m, player, dt, def.speed * slow);
+    } else if (!def.boss && game.player.oil > 0 && !game.inHub() && d < sense * 2.5 &&
+               !lineBlocked(world, m.x, m.y, player.x, player.y)) {
+      // the only light for miles gives you away: unaggroed Umbral things drift toward it
+      approach(world, m, player, dt, def.speed * 0.4 * slow);
     } else wander(world, m, dt, def.speed * 0.35 * slow);
   }
 
