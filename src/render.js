@@ -394,18 +394,32 @@ export class Renderer {
     let inc = 0; for (const b of g.run.beacons) inc += b.income;
     ctx.fillText(`tallow ${g.player.tallow}   kindling ${g.meta.kindling}   beacons ${g.run.beacons.length}/${g.beaconCap}` +
       (inc > 0 ? `   +${inc.toFixed(2)} oil/s` : ''), pad + 2, pad + 20 + bh + 32);
-    // whisper: one contextual hint, bottom center, subtle
+    // whisper: one contextual hint, bottom center, subtle; wraps on narrow screens
     const wh = g.whisper();
     if (wh && !g.ui.altar && !g.ui.merchant && !g.ui.help && !g.ui.dialogue && !g.ui.achievements) {
       const CW = ctx.canvas.width, CH = ctx.canvas.height;
       ctx.save();
       ctx.textAlign = 'center';
       ctx.font = '13px monospace';
+      // wrap into at most 2 lines
+      const maxW = CW - 40;
+      let lines = [wh];
+      if (ctx.measureText(wh).width > maxW) {
+        const words = wh.split(' ');
+        lines = [''];
+        for (const w2 of words) {
+          const cand = lines[lines.length - 1] + (lines[lines.length - 1] ? ' ' : '') + w2;
+          if (ctx.measureText(cand).width > maxW && lines.length < 2) lines.push(w2);
+          else lines[lines.length - 1] = cand;
+        }
+      }
+      const widest = Math.max(...lines.map(l => ctx.measureText(l).width));
+      const boxH = 14 + lines.length * 18;
       ctx.fillStyle = 'rgba(0,0,0,0.55)';
-      const tw = ctx.measureText(wh).width;
-      ctx.fillRect(CW / 2 - tw / 2 - 10, CH - 46, tw + 20, 24);
+      ctx.fillRect(CW / 2 - widest / 2 - 10, CH - boxH - 26, widest + 20, boxH);
       ctx.fillStyle = 'rgba(210,200,170,0.75)';
-      ctx.fillText(wh, CW / 2, CH - 29);
+      let ly = CH - boxH - 10;
+      for (const l of lines) { ctx.fillText(l, CW / 2, ly); ly += 18; }
       ctx.restore();
       ctx.textAlign = 'left';
     }
