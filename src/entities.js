@@ -63,7 +63,14 @@ export function makeMob(kind, x, y, tier) {
 
 export function spawnMobsFromWorld(world, rng) {
   const mobs = [];
-  for (const s of world.mobSpawns) mobs.push(makeMob(s.kind, s.x + 0.5, s.y + 0.5, s.tier));
+  for (const s of world.mobSpawns) {
+    mobs.push(makeMob(s.kind, s.x + 0.5, s.y + 0.5, s.tier));
+    // denser dark: most spawn points carry a second thing, jittered nearby
+    if (rng.next() < 0.6) {
+      const jx = s.x + 0.5 + (rng.next() - 0.5) * 6, jy = s.y + 0.5 + (rng.next() - 0.5) * 6;
+      if (!tileSolid(world, Math.floor(jx), Math.floor(jy))) mobs.push(makeMob(s.kind, jx, jy, s.tier));
+    }
+  }
   return mobs;
 }
 
@@ -94,8 +101,8 @@ export function updateMob(m, dt, game) {
     // motes are drawn to light (moth-to-flame): approach player if player lit, burn anyway
     if (m.aggro && litHere < 0.85) approach(world, m, player, dt, def.speed * 0.8 * slow);
     else if (!m.aggro && game.player.oil > 0 && !game.inHub() && d < sense * 3 &&
-             !lineBlocked(world, m.x, m.y, player.x, player.y)) approach(world, m, player, dt, def.speed * 0.5 * slow);
-    else wander(world, m, dt, def.speed * 0.4 * slow);
+             !lineBlocked(world, m.x, m.y, player.x, player.y)) approach(world, m, player, dt, def.speed * 0.65 * slow);
+    else wander(world, m, dt, def.speed * 0.55 * slow);
   } else {
     // hunt, but stalkers fear strong light
     const fearsLight = m.kind === 'stalker' && litHere > 0.55;
@@ -107,7 +114,7 @@ export function updateMob(m, dt, game) {
     } else if (!def.boss && game.player.oil > 0 && !game.inHub() && d < sense * 2.5 &&
                !lineBlocked(world, m.x, m.y, player.x, player.y)) {
       // the only light for miles gives you away: unaggroed Umbral things drift toward it
-      approach(world, m, player, dt, def.speed * 0.4 * slow);
+      approach(world, m, player, dt, def.speed * 0.55 * slow);
     } else wander(world, m, dt, def.speed * 0.35 * slow);
   }
 

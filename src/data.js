@@ -119,6 +119,16 @@ export const UPGRADES = [
     desc: 'POWER: unmade Umbral things burst into cinders that burn their neighbours.',
     effect: { burst: 1 },
   },
+  {
+    id: 'ember_siphon', name: 'Ember Siphon', cost: 16, costGrowth: 1.6, maxLevel: 3,
+    desc: 'POWER: every kill sips back oil — the dark pays for what it loses.',
+    effect: { siphon: 1 },
+  },
+  {
+    id: 'quick_wick', name: 'Quick Wick', cost: 18, costGrowth: 1.6, maxLevel: 3,
+    desc: 'POWER: the flash recovers 15% faster per level.',
+    effect: { quickwick: 1 },
+  },
 ];
 
 export const NPCS = [

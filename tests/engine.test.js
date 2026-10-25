@@ -37,7 +37,7 @@ test('NPC awakening mutates the real NPC and grants kindling exactly once', () =
   assert.ok(g.interact(), 'interact should fire');
   assert.notEqual(npc.state, 'lost', 'real NPC must change state');
   for (let i = 0; i < 30; i++) g.interact();
-  assert.equal(g.meta.kindling - k0, 8, 'exactly one kindling grant');
+  assert.equal(g.meta.kindling - k0, 12, 'exactly one kindling grant');
   assert.ok(g.meta.npcsSaved.includes(npc.defId));
 });
 

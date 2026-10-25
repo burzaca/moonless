@@ -279,7 +279,7 @@ export class Game {
     if (p.flashCd > 0) return;
     if (p.oil < this.eff('flashCost') * 0 + BASE.flashCost) { this.toast('Not enough oil to Flash.', 'bad'); return; }
     p.oil -= BASE.flashCost;
-    p.flashCd = BASE.flashCd;
+    p.flashCd = BASE.flashCd * (1 - 0.15 * this.lvl('quick_wick'));
     const r = BASE.flashRadius + this.upSum('flashRadius') + this.relicVal('flashRadius');
     const dmg = BASE.flashDmg * (1 + this.upSum('flashDmg'));
     for (const m of this.run.mobs) {
@@ -361,6 +361,8 @@ export class Game {
     const idx = this.run.mobs.indexOf(m);
     if (idx >= 0) this.run.mobs.splice(idx, 1);
     this.run.kills++;
+    const siph = this.lvl('ember_siphon');
+    if (siph > 0) this.addOil(1 * siph);
     // POWER: ember burst — the unmade thing bursts and burns its neighbours
     const burstLvl = this.lvl('ember_burst');
     if (burstLvl > 0) {
@@ -392,7 +394,7 @@ export class Game {
       this.toast(`${def.name} is unmade. The wilds shudder.`, 'kindling');
       if (this.meta.kingsSlain.length >= 3) this.mode = 'dawn';
     } else if (!this.run.respawnQueue) this.run.respawnQueue = [];
-    if (!def.boss) this.run.respawnQueue.push({ t: 60 + Math.random() * 90, kind: m.kind, x: m.x, y: m.y, tier: m.tier });
+    if (!def.boss) this.run.respawnQueue.push({ t: 25 + Math.random() * 35, kind: m.kind, x: m.x, y: m.y, tier: m.tier });
   }
 
   giveRandomRelic() {
@@ -445,7 +447,7 @@ export class Game {
   discoverLandmark(lm) {
     const key = lm.type + lm.x + ',' + lm.y;
     this.run.discovered.add(key);
-    const gain = { shrine: 3, grove: 2, spring: 2, obelisk: 4 }[lm.type] || 2;
+    const gain = { shrine: 8, grove: 5, spring: 5, obelisk: 7 }[lm.type] || 4;
     this.addKindling(gain, `discovered a ${lm.type}`);
     const text = (LANDMARK_TEXT[lm.type] || [''])[0];
     if (text) this.toast(text, 'lore');
@@ -478,7 +480,7 @@ export class Game {
     }
     if (n.defId === 'child') this.drainOil(15);
     n.state = 'awakened';
-    this.addKindling(8, `${n.def.name} remembers the way home`);
+    this.addKindling(12, `${n.def.name} remembers the way home`);
     if (!this.meta.npcsSaved.includes(n.defId)) this.meta.npcsSaved.push(n.defId);
     const line = this.rng.pick(n.def.dialogueAwaken);
     this.toast(`${n.def.name}: "${line}"`, 'lore');

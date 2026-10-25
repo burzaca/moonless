@@ -511,7 +511,7 @@ export class Renderer {
     ctx.font = '15px monospace';
     ctx.fillText(this.game.deathTip || '', W / 2, H * 0.42);
     ctx.fillStyle = '#8a8577';
-    ctx.fillText(`run: +${this.game.run.kindlingEarned} kindling · ${this.game.run.kills} unmade · ${this.game.run.beaconsPlaced} beacons`, W / 2, H * 0.47);
+    ctx.fillText(`banked this run: +${this.game.run.kindlingEarned} (already yours) · total carried: ${this.game.meta.kindling} · ${this.game.run.kills} unmade`, W / 2, H * 0.47);
     ctx.fillStyle = `rgba(232,226,208,${0.5 + 0.5 * Math.sin(this.game.time * 3)})`;
     ctx.fillText('press ENTER to wake at the Hollow', W / 2, H * 0.56);
     ctx.textAlign = 'left';
