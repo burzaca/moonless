@@ -104,6 +104,21 @@ export const UPGRADES = [
     desc: 'The lantern sips 8% less oil per level.',
     effect: { oilBurnMult: -0.08 },
   },
+  {
+    id: 'cinder_pulse', name: 'Cinder Pulse', cost: 18, costGrowth: 1.7, maxLevel: 3,
+    desc: 'POWER: every few seconds the lantern pulses — free light damage around you.',
+    effect: { pulse: 1 },
+  },
+  {
+    id: 'wick_wisp', name: 'Wick Wisp', cost: 22, costGrowth: 1.8, maxLevel: 3,
+    desc: 'POWER: a small light follows you, burning whatever it touches.',
+    effect: { wisp: 1 },
+  },
+  {
+    id: 'ember_burst', name: 'Ember Burst', cost: 20, costGrowth: 1.7, maxLevel: 3,
+    desc: 'POWER: unmade Umbral things burst into cinders that burn their neighbours.',
+    effect: { burst: 1 },
+  },
 ];
 
 export const NPCS = [

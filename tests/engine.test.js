@@ -125,3 +125,29 @@ test('achievements unlock on the right events and persist in meta', () => {
   g.checkAchievements();
   assert.equal(g.meta.achievements.length, before, 'no duplicate unlocks');
 });
+
+test('renderTallow only converts what fits in the tank', () => {
+  const g = new Game(defaultMeta(), 9);
+  g.setEntities(entities);
+  g.mode = 'play';
+  g.player.oil = g.oilMax - 4; // room for ~1 tallow at yield 3
+  g.player.tallow = 10;
+  g.renderTallow(false);
+  assert.ok(g.player.oil <= g.oilMax, 'oil capped');
+  assert.ok(g.player.tallow > 0, 'surplus tallow kept, not wasted');
+});
+
+test('powers: pulse, wisps and bursts run without errors and add damage', () => {
+  const meta = defaultMeta();
+  meta.upgrades = { cinder_pulse: 2, wick_wisp: 2, ember_burst: 2 };
+  const g = new Game(meta, 3);
+  g.setEntities(entities);
+  g.mode = 'play';
+  // spawn a cluster of mobs next to the player
+  for (let i = 0; i < 6; i++) g.run.mobs.push(entities.makeMob('mote', g.player.x + 1 + i * 0.4, g.player.y, 1));
+  const hpBefore = g.run.mobs.reduce((s, m) => s + m.hp, 0);
+  for (let i = 0; i < 60 * 12; i++) g.update(1 / 60, { left: false, right: false, up: false, down: false });
+  const hurt = g.run.mobs.reduce((s, m) => s + m.hp, 0) < hpBefore || g.run.kills > 0;
+  assert.ok(hurt, 'powers dealt damage');
+  assert.ok(g.wisps === null || g.wisps.length === 2);
+});

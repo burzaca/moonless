@@ -248,10 +248,14 @@ export class Game {
     const t = this.player.tallow;
     if (t <= 0) { this.toast('No tallow to render.', 'bad'); return; }
     const yieldPer = atBeacon ? 2 + this.upSum('renderRatio') : BASE.cauldronYield + this.upSum('renderRatio');
-    const oil = t * yieldPer;
-    this.player.tallow = 0;
+    // only render what the tank can hold — the rest stays for later
+    const room = Math.floor((this.oilMax - this.player.oil) / yieldPer);
+    if (room <= 0) { this.toast('The tank is full — the wax will keep.', 'info'); return; }
+    const used = Math.min(t, room);
+    const oil = used * yieldPer;
+    this.player.tallow = t - used;
     this.addOil(oil);
-    this.toast(`Rendered ${t} tallow into ${oil} oil.`, 'good');
+    this.toast(`Rendered ${used} tallow into ${Math.round(oil)} oil.` + (used < t ? ` ${t - used} kept.` : ''), 'good');
     this.sfx('render_tallow');
   }
 
@@ -312,7 +316,7 @@ export class Game {
         .map(u => ({ u, cost: u.cost * Math.pow(u.costGrowth, this.lvl(u.id)) }))
         .sort((a, b) => a.cost - b.cost)[0];
       if (this.meta.runs === 0 && this.run.discovered.size === 0)
-        return 'Walk out of the Hollow. The dark is hungry — your light is not.';
+        return 'Walk out. Landmarks hold Kindling — the Altar turns it into power. (E at the altar)';
       if (cheapest && this.meta.kindling >= cheapest.cost)
         return 'The Ember Altar hungers for Kindling. (E at the altar)';
       return null;
@@ -357,6 +361,14 @@ export class Game {
     const idx = this.run.mobs.indexOf(m);
     if (idx >= 0) this.run.mobs.splice(idx, 1);
     this.run.kills++;
+    // POWER: ember burst — the unmade thing bursts and burns its neighbours
+    const burstLvl = this.lvl('ember_burst');
+    if (burstLvl > 0) {
+      for (const o of this.run.mobs) {
+        if (Math.hypot(o.x - m.x, o.y - m.y) < 3) this.hurtMob(o, 8 * burstLvl, true);
+      }
+      spark(this, m.x, m.y, '#ff8a3c', 10, 2.5, 0.4);
+    }
     this.meta.totalKills = (this.meta.totalKills || 0) + 1;
     const def = m.def;
     const bonus = 1 + this.relicVal('tallowBonus') + (this.meta.npcsSaved.includes('child') ? 0.15 : 0);
@@ -426,7 +438,7 @@ export class Game {
     else if (it.kind === 'npc') this.awakenNpc(it.ref);
     else if (it.kind === 'cauldron') this.renderTallow(false);
     else if (it.kind === 'beacon') this.renderTallow(true);
-    else if (it.kind === 'altar') { this.ui.altar = !this.ui.altar; this.sfx('ui_open'); }
+    else if (it.kind === 'altar') { this.ui.altar = true; this.ui.altarPage = 0; this.sfx('ui_open'); }
     return true;
   }
 
@@ -577,6 +589,31 @@ export class Game {
       this.light.add(this.world.hub.x, this.world.hub.y, this.world.hub.r + 4, 1);
       for (const bz of this.hubProps.braziers) this.light.add(bz.x, bz.y, 4.5, 0.9);
     }
+    // POWER: wick wisps orbit the bearer and carry their own small light
+    const wispLvl = this.lvl('wick_wisp');
+    if (wispLvl > 0) {
+      if (!this.wisps || this.wisps.length !== wispLvl) {
+        this.wisps = Array.from({ length: wispLvl }, (_, i) => ({ a: (i / wispLvl) * Math.PI * 2, x: p.x, y: p.y }));
+      }
+      for (const w of this.wisps) {
+        w.a += 1.8 * dt;
+        w.x = p.x + Math.cos(w.a) * 2.5;
+        w.y = p.y + Math.sin(w.a) * 2.5;
+        this.light.add(w.x, w.y, 2, 0.6);
+      }
+    } else this.wisps = null;
+    // POWER: cinder pulse — free AoE light damage on a timer
+    const pulseLvl = this.lvl('cinder_pulse');
+    if (pulseLvl > 0) {
+      this._pulseT = (this._pulseT || 0) + dt;
+      if (this._pulseT >= 8 - 1.5 * pulseLvl) {
+        this._pulseT = 0;
+        const pr = 3.5 + pulseLvl;
+        for (const m of [...this.run.mobs]) if (dist(m, p) <= pr) this.hurtMob(m, 6 * pulseLvl, true);
+        spark(this, p.x, p.y, '#ffb347', 18, pr * 0.8, 0.5);
+        this.sfx('flash');
+      }
+    }
 
     // fog reveal around player
     this.revealAround(p.x, p.y, lr);
@@ -590,6 +627,14 @@ export class Game {
         const dps = this.burnDps * (m.def.burnWeak || 1) * l;
         this.hurtMob(m, dps * dt, false);
         if (Math.random() < dt * 2) spark(this, m.x, m.y, '#ffb347', 1, 1, 0.3, 1);
+      }
+      if (this.wisps) {
+        for (const w of this.wisps) {
+          if (Math.hypot(m.x - w.x, m.y - w.y) < 1.0) {
+            this.hurtMob(m, this.burnDps * 0.6 * (m.def.burnWeak || 1) * dt, false);
+            if (Math.random() < dt * 3) spark(this, m.x, m.y, '#ffd27a', 1, 1, 0.25, 1);
+          }
+        }
       }
     }
 

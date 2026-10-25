@@ -170,6 +170,17 @@ export class Renderer {
     }
 
     // ---- hub props ----
+    // wick wisps: small orbiting lights with a soft trail
+    if (g.wisps) {
+      for (const w of g.wisps) {
+        const sx = (w.x - cam.x) * TS, sy = (w.y - cam.y) * TS;
+        const fl = 0.7 + 0.3 * Math.sin(g.time * 9 + w.a);
+        ctx.fillStyle = `rgba(255,210,122,${0.25 * fl})`;
+        ctx.beginPath(); ctx.arc(sx, sy, 14, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = `rgba(255,235,170,${0.95 * fl})`;
+        ctx.beginPath(); ctx.arc(sx, sy, 4, 0, Math.PI * 2); ctx.fill();
+      }
+    }
     if (g.hubProps) {
       const hp = g.hubProps;
       if (g.fog[Math.floor(hp.cauldron.y) * world.W + Math.floor(hp.cauldron.x)]) {
@@ -296,6 +307,7 @@ export class Renderer {
         d.beginPath(); d.arc(cx, cy, r, 0, Math.PI * 2); d.fill();
       };
       punch(g.player.x, g.player.y, (g.player.oil > 0 ? g.lightRadius : 2) * 1.15, 1);
+      if (g.wisps) for (const w of g.wisps) punch(w.x, w.y, 2.6, 0.8);
       for (const b of g.run.beacons) punch(b.x, b.y, b.radius * 1.2, 0.95);
       if (g.inHub()) {
         punch(g.world.hub.x, g.world.hub.y, (g.world.hub.r + 5) * 1.1, 1);
@@ -524,26 +536,40 @@ export class Renderer {
   drawAltarMenu() {
     const g = this.game, ctx = this.ctx;
     const W = ctx.canvas.width;
-    const w = 640, h = 460, x = (W - w) / 2, y = 60;
+    const perPage = 9;
+    const page = Math.max(0, Math.min(g.ui.altarPage || 0, Math.ceil(UPGRADES.length / perPage) - 1));
+    g.ui.altarPage = page;
+    const shown = Math.min(perPage, UPGRADES.length - page * perPage);
+    const h = 110 + shown * 32;
+    const w = 640, x = (W - w) / 2, y = 60;
     this.panel(x, y, w, h);
     ctx.fillStyle = '#ffd27a'; ctx.font = 'bold 18px monospace';
     ctx.fillText('EMBER ALTAR — spend Kindling', x + 20, y + 30);
     ctx.fillStyle = '#a89f8a'; ctx.font = '13px monospace';
-    ctx.fillText(`kindling: ${g.meta.kindling}   [1-9] buy   [ESC] close`, x + 20, y + 52);
+    const pages = Math.ceil(UPGRADES.length / perPage);
+    ctx.fillText(`you have ${g.meta.kindling} Kindling   [1-${shown}] buy` +
+      (pages > 1 ? `   [→] next page   [←] back` : '') + `   [ESC] close`, x + 20, y + 52);
+    ctx.fillStyle = '#6f6a5c';
+    ctx.fillText('Kindling is found at landmarks, given by saved souls, taken from unmade Kings.', x + 20, y + 68);
     let yy = y + 80;
     g.ui.altarList = [];
-    for (let i = 0; i < UPGRADES.length && i < 12; i++) {
+    for (let i = page * perPage; i < UPGRADES.length && i < (page + 1) * perPage; i++) {
       const u = UPGRADES[i];
       const lvl = g.lvl(u.id);
       const maxed = lvl >= u.maxLevel;
-      const cost = Math.round(u.cost * Math.pow(1.6, lvl));
+      const cost = Math.round(u.cost * Math.pow(u.costGrowth, lvl));
       const afford = g.meta.kindling >= cost;
       g.ui.altarList.push({ u, cost, maxed });
       ctx.fillStyle = maxed ? '#5a564c' : afford ? '#cfc8b8' : '#7a756a';
-      ctx.fillText(`[${i + 1}] ${u.name}  Lv${lvl}/${u.maxLevel}  ${maxed ? 'MAX' : cost + 'k'}`, x + 20, yy);
+      ctx.fillText(`[${i - page * perPage + 1}] ${u.name}  Lv${lvl}/${u.maxLevel}  ` +
+        (maxed ? 'MAX' : `cost ${cost}` + (afford ? '' : ' — not enough')), x + 20, yy);
       ctx.fillStyle = '#6f6a5c';
       ctx.fillText(`    ${u.desc}`, x + 20, yy + 15);
       yy += 32;
+    }
+    if (pages > 1) {
+      ctx.fillStyle = '#8a8577';
+      ctx.fillText(`page ${page + 1}/${pages}`, x + w - 90, y + 30);
     }
   }
 
@@ -602,6 +628,8 @@ export class Renderer {
       '',
       'Your light burns Umbral things that touch it. Oil feeds the flame;',
       'the deep dark burns oil faster. At zero oil, the Umbral starts taking you.',
+      'KILLING gives TALLOW (fuel). KINDLING comes only from: discovering landmarks,',
+      'guiding lost souls home, and unmaking the three Kings. Kindling buys powers.',
       'Death returns you to the Hollow — carried tallow is lost, Kindling is kept.',
       'Find the six lost souls. Light them. Help them home. They will help you.',
       'Three Umbral Kings wait at the edges of the world.',

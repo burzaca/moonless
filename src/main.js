@@ -105,6 +105,8 @@ window.addEventListener('keydown', (e) => {
 
   if (game.ui.altar) {
     if (k === 'escape') { game.ui.altar = false; game.sfx('ui_click'); return; }
+    if (k === 'arrowright') { game.ui.altarPage = (game.ui.altarPage || 0) + 1; game.sfx('ui_click'); return; }
+    if (k === 'arrowleft') { game.ui.altarPage = Math.max(0, (game.ui.altarPage || 0) - 1); game.sfx('ui_click'); return; }
     const n = parseInt(k, 10);
     if (n >= 1 && game.ui.altarList && game.ui.altarList[n - 1]) buyUpgrade(game.ui.altarList[n - 1]);
     return;
