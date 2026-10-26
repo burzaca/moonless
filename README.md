@@ -30,9 +30,21 @@ palette-indexed pixel art defined in code.
    Hollow, giving services and passives.
 6. Die and the dark takes your carried tallow — but **Kindling** (from discoveries,
    souls, and kills) is kept. Spend it at the **Ember Altar** on permanent lantern
-   upgrades: wider glass, hotter wick, red/gold/blue focus lenses…
+   upgrades: wider glass, hotter wick, red/gold/blue focus lenses, and ten **powers**
+   (Cinder Pulse, Wick Wisp, Ember Burst, Ember Siphon, Quick Wick, Ember Reaping,
+   Cinder Trail, Beacon Drum, Ashen Ward, Deathflare)…
 7. Three **Umbral Kings** wait at the edges of the world. Unmake all three and the
-   Umbral breaks.
+   Umbral breaks — and then the dark crowns new ones. **Every King you unmake raises
+   Dread**: the Umbral come back with more health, hit harder, respawn faster, and
+   answer a King's death with a hunting wave. The Dawn is a milestone, not a wall.
+
+## Saving
+
+`ESC` opens **the Hollow menu**: save this expedition, load it, or reset all progress.
+A save captures the expedition itself — where you stood, your oil and tallow, every
+beacon you planted, what you had discovered, which Kings had fallen, and the Dread of
+that world — alongside your permanent progress. The game also autosaves every 15
+seconds, so closing the tab and pressing ENTER at the title continues the last night.
 
 ## Controls
 
@@ -44,7 +56,8 @@ palette-indexed pixel art defined in code.
 | B | plant a beacon (5 tallow + 10 oil) |
 | R | render carried tallow into oil (at cauldron or lit beacon) |
 | Q | cycle lantern focus (unlock lenses at the Altar): **RED** burns harder · **BLUE** slows the dark · **GOLD** uncovers hidden caches |
-| M | map · H | help · ESC | close |
+| ESC | **save / load / reset** menu · also closes any open overlay |
+| M | map · H | help · P | achievements · N | sound |
 
 Touch devices get a virtual joystick and action buttons. Share a world with a
 link: append `?seed=123` (or `?daily`) to the URL.
@@ -60,7 +73,8 @@ the **Bellwright** (slows the Tide) · the **Moth-keeper** (Umbral things notice
 ```
 npm test          # contract + engine tests (node --test)
 npm run sim       # headless bot plays 10 seeds — balance smoke test
-node tools/fighttest.js   # scripted King fights — combat balance
+node tools/fighttest.js             # kiting bot vs each King, at Dread 0/2/4/6
+node tools/dreadcheck.js            # the same bot across Dread levels — the ramp curve
 ```
 
 - `docs/DESIGN.md` — the full design vision

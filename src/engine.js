@@ -15,6 +15,18 @@ const BASE = {
   calmTime: 210, tideTime: 60,
 };
 
+export function roman(n) {
+  n = Math.max(0, Math.floor(n));
+  if (n === 0) return 'N';
+  const t = [[1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'], [100, 'C'], [90, 'XC'],
+    [50, 'L'], [40, 'XL'], [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']];
+  let out = '';
+  for (const [v, sym] of t) while (n >= v) { out += sym; n -= v; }
+  return out;
+}
+
+const KING_BIOME = { king_stag: 'dark fields', king_choir: 'salt flats', king_hollow: 'drowned ruins' };
+
 export class LightField {
   constructor(world) {
     this.world = world;
@@ -52,6 +64,7 @@ export class Game {
   constructor(meta, seed) {
     this.meta = meta;
     this.seed = seed >>> 0;
+    this.worldSeed = this.seed;
     this.rng = makeRng(this.seed);
     this.world = generateWorld(this.seed);
     this.light = new LightField(this.world);
@@ -62,6 +75,7 @@ export class Game {
     this.particles = [];
     this.time = 0;
     this.shake = 0;
+    this.trail = [];
     this.buildRun();
   }
 
@@ -103,6 +117,23 @@ export class Game {
   get speed() { return BASE.speed + this.relicVal('moveSpeed'); }
   get beaconCap() { return BASE.beaconCap + this.lvl('beacon_cap'); }
   hasFocus(f) { return this.lvl('focus_' + f) > 0; }
+
+  // ---------- dread: the dark escalates once per King unmade ----------
+  dreadScale() {
+    const d = this.meta.dread || 0;
+    return {
+      hp: 1 + 0.22 * d, dmg: 1 + 0.15 * d, speed: Math.min(1.45, 1 + 0.05 * d),
+      respawn: Math.max(0.35, 1 - 0.07 * d), tideExtra: 3 * d,
+    };
+  }
+  endlessKings() { return this.meta.kingsSlain.length >= 3; }
+  // crown I = the original Kings; every full round of three unmade adds a crown
+  kingCrown() { return Math.floor((this.meta.dread || 0) / 3) + 1; }
+  crownKing(kind, x, y) {
+    const m = makeMob(kind, x, y, 2, this.dreadScale());
+    if (this.endlessKings()) m.label = m.def.name + ' · ' + roman(this.kingCrown());
+    return m;
+  }
   get focusSlowMul() { return this.focus === 'blue' ? 0.7 : 1; }
 
   // ---------- run lifecycle ----------
@@ -115,12 +146,14 @@ export class Game {
     };
     this.focus = 'white';
     this.run = {
-      beacons: [], mobs: spawnMobsFromWorld(w, this.rng), npcs: [], drops: [],
+      beacons: [], mobs: spawnMobsFromWorld(w, this.rng, this.dreadScale()), npcs: [], drops: [],
       relics: [], discovered: new Set(), slainKings: new Set(),
       kills: 0, beaconsPlaced: 0, tidesSurvived: 0, deaths: 0,
       kindlingEarned: 0, startTime: 0, springUsed: new Set(),
       respawnQueue: [], // {t, kind, x, y, tier}
+      kingQueue: [], // {t, kind} — endless re-crowns
     };
+    this.trail = [];
     // place NPCs in the wilds
     const npcIds = NPCS.map(n => n.id);
     let placed = 0, guard = 0;
@@ -134,10 +167,8 @@ export class Game {
     // kings live at their landmark anchors
     for (const lm of w.landmarks) {
       if (!lm.type.startsWith('king_')) continue;
-      if (this.meta.kingsSlain.includes(lm.type)) continue;
-      const kind = lm.type;
-      const m = makeMob(kind, lm.x + 0.5, lm.y + 0.5, 2);
-      this.run.mobs.push(m);
+      if (!this.endlessKings() && this.meta.kingsSlain.includes(lm.type)) continue;
+      this.run.mobs.push(this.crownKing(lm.type, lm.x + 0.5, lm.y + 0.5));
     }
     // tide
     this.tide = { phase: 'calm', t: this.calmTime(), warned: false };
@@ -155,8 +186,9 @@ export class Game {
   }
 
   resetRun() {
-    this.rng = makeRng(this.seed + this.meta.runs * 7919 + 13);
-    this.world = generateWorld(this.seed + this.meta.runs * 7919 + 13);
+    this.worldSeed = (this.seed + this.meta.runs * 7919 + 13) >>> 0;
+    this.rng = makeRng(this.worldSeed);
+    this.world = generateWorld(this.worldSeed);
     this.light = new LightField(this.world);
     this.fog = new Uint8Array(this.world.W * this.world.H);
     this.particles = [];
@@ -211,13 +243,14 @@ export class Game {
         t.phase = 'tide'; t.t = BASE.tideTime;
         this.toast('The Umbral Tide rolls in.', 'bad');
         // spawn extra mobs from edges around player
-        for (let i = 0; i < 12; i++) {
+        const n = 12 + this.dreadScale().tideExtra;
+        for (let i = 0; i < n; i++) {
           const a = Math.random() * Math.PI * 2, r = 18 + Math.random() * 8;
           const x = this.player.x + Math.cos(a) * r, y = this.player.y + Math.sin(a) * r;
           const tx = Math.floor(x), ty = Math.floor(y);
           if (!isWalkable(this.world, tx, ty)) continue;
           const kind = Math.random() < 0.6 ? 'mote' : 'stalker';
-          this.run.mobs.push(makeMob(kind, x, y, this.playerTier()));
+          this.run.mobs.push(makeMob(kind, x, y, this.playerTier(), this.dreadScale()));
         }
       }
     } else if (t.t <= 0) {
@@ -352,6 +385,7 @@ export class Game {
     if (p.hp <= 0) this.die();
   }
   hurtMob(m, dps, burst = false) {
+    if (m.hp <= 0) return; // already unmade this frame — never pay out twice
     m.hp -= dps;
     m.hitFlash = 0.12;
     if (burst) spark(this, m.x, m.y, '#ffd27a', 4, 2, 0.3);
@@ -384,17 +418,182 @@ export class Game {
       for (let i = 0; i < omin + Math.floor(Math.random() * (omax - omin + 1)); i++)
         this.run.drops.push(makeDrop('oilflask', m.x + (Math.random() - 0.5), m.y + (Math.random() - 0.5)));
     }
+    // POWER: ember reaping — cold sparks fall from the unmade
+    const reap = this.lvl('ember_reaping');
+    if (reap > 0) {
+      const n = def.boss ? 2 + reap : (Math.random() < 0.06 * reap ? 1 : 0);
+      for (let i = 0; i < n; i++)
+        this.run.drops.push(makeDrop('kindling', m.x + (Math.random() - 0.5) * 1.5, m.y + (Math.random() - 0.5) * 1.5));
+    }
     spark(this, m.x, m.y, '#c8b8ff', 10, 2.5, 0.6);
     this.sfx('burn');
     if (def.boss) {
+      const wasEndless = this.endlessKings();
       this.run.slainKings.add(m.kind);
       if (!this.meta.kingsSlain.includes(m.kind)) this.meta.kingsSlain.push(m.kind);
-      this.addKindling(def.kindling, `${def.name} unmade`);
+      this.addKindling(def.kindling, `${m.label || def.name} unmade`);
       this.giveRandomRelic();
-      this.toast(`${def.name} is unmade. The wilds shudder.`, 'kindling');
-      if (this.meta.kingsSlain.length >= 3) this.mode = 'dawn';
-    } else if (!this.run.respawnQueue) this.run.respawnQueue = [];
-    if (!def.boss) this.run.respawnQueue.push({ t: 25 + Math.random() * 35, kind: m.kind, x: m.x, y: m.y, tier: m.tier });
+      this.toast(`${m.label || def.name} is unmade. The wilds shudder.`, 'kindling');
+      this.onKingSlain(m);
+      if (wasEndless || this.endlessKings()) {
+        if (!this.run.kingQueue) this.run.kingQueue = [];
+        this.run.kingQueue.push({ t: 90 + Math.random() * 60, kind: m.kind });
+      }
+      if (this.endlessKings() && !this.meta.dawnSeen) { this.meta.dawnSeen = true; this.mode = 'dawn'; }
+    } else {
+      if (!this.run.respawnQueue) this.run.respawnQueue = [];
+      const t = (25 + Math.random() * 35) * this.dreadScale().respawn;
+      this.run.respawnQueue.push({ t, kind: m.kind, x: m.x, y: m.y, tier: m.tier });
+    }
+  }
+
+  onKingSlain(m) {
+    this.meta.dread = (this.meta.dread || 0) + 1;
+    const d = this.meta.dread;
+    this.toast(`The dark remembers. Dread ${roman(d)}.`, 'warn');
+    // revenge wave: the wilds answer the fallen crown
+    const p = this.player, scale = this.dreadScale(), tier = this.playerTier();
+    const kinds = Object.keys(MOBS).filter(k => !MOBS[k].boss && MOBS[k].tier <= Math.max(1, tier));
+    const want = 6 + 2 * d;
+    let made = 0;
+    for (let tries = 0; made < want && tries < want * 6; tries++) {
+      const a = Math.random() * Math.PI * 2, r = 15 + Math.random() * 5;
+      const x = p.x + Math.cos(a) * r, y = p.y + Math.sin(a) * r;
+      if (!isWalkable(this.world, Math.floor(x), Math.floor(y))) continue;
+      const kind = kinds[Math.floor(Math.random() * kinds.length)];
+      const r2 = makeMob(kind, x, y, tier, scale);
+      r2.aggro = true;
+      this.run.mobs.push(r2);
+      made++;
+    }
+  }
+
+  updateKingQueue(dt) {
+    const q = this.run.kingQueue;
+    if (!q || !q.length) return;
+    for (let i = q.length - 1; i >= 0; i--) {
+      const k = q[i];
+      k.t -= dt;
+      if (k.t > 0) continue;
+      q.splice(i, 1);
+      const lm = this.world.landmarks.find(l => l.type === k.kind);
+      if (!lm || this.run.mobs.some(o => o.kind === k.kind)) continue;
+      this.run.mobs.push(this.crownKing(k.kind, lm.x + 0.5, lm.y + 0.5));
+      this.toast(`A new crown takes shape at the ${KING_BIOME[k.kind] || 'edge of the world'}.`, 'warn');
+    }
+  }
+
+  // ---------- powers v2 ----------
+  trailTick(dt) {
+    const L = this.lvl('cinder_trail');
+    if (L === 0) { if (this.trail.length) this.trail = []; return; }
+    const p = this.player;
+    for (let i = this.trail.length - 1; i >= 0; i--) {
+      this.trail[i].life -= dt;
+      if (this.trail[i].life <= 0) this.trail.splice(i, 1);
+    }
+    this._trailT = (this._trailT || 0) + dt;
+    if (p.moving && p.oil > 0 && this._trailT >= 0.35) {
+      this._trailT = 0;
+      this.trail.push({ x: p.x, y: p.y, life: 6 });
+      if (this.trail.length > 40) this.trail.splice(0, this.trail.length - 40);
+    }
+    for (const c of this.trail) {
+      this.light.add(c.x, c.y, 1.2, 0.35);
+      for (const m of [...this.run.mobs]) {
+        if (Math.hypot(m.x - c.x, m.y - c.y) < 0.7) this.hurtMob(m, 5 * L * (m.def.burnWeak || 1) * dt, false);
+      }
+    }
+  }
+
+  beaconDrumTick(dt) {
+    const L = this.lvl('beacon_drum');
+    if (L === 0) return;
+    const every = 7 - 1.5 * L, r = 3.5 + L;
+    for (const b of this.run.beacons) {
+      b.drumT = (b.drumT || 0) + dt;
+      if (b.drumT < every) continue;
+      b.drumT = 0;
+      for (const m of [...this.run.mobs]) if (dist(m, b) <= r) this.hurtMob(m, 5 * L, true);
+      spark(this, b.x, b.y, '#ffd27a', 14, r * 0.8, 0.5);
+    }
+  }
+
+  wardMul(m) {
+    const L = this.lvl('ashen_ward');
+    if (L === 0) return 1;
+    return this.light.at(m.x, m.y) > 0.4 ? 1 - 0.12 * L : 1;
+  }
+
+  deathflare() {
+    const L = this.lvl('deathflare');
+    if (L === 0 || this.player.oil > 0 || (this._flareCd || 0) > 0) return false;
+    const p = this.player, r = 3 + L;
+    this._flareCd = 30;
+    this._flareT = 3;
+    for (const m of [...this.run.mobs]) if (dist(m, p) <= r) this.hurtMob(m, 14 * L, true);
+    spark(this, p.x, p.y, '#ff7a3c', 30, r * 1.2, 0.7);
+    this.shake = Math.max(this.shake, 0.35);
+    this.sfx('flash');
+    this.toast('The dying wick flares.', 'warn');
+    return true;
+  }
+
+  // ---------- run snapshot (one save slot) ----------
+  snapshotRun() {
+    const p = this.player, r = this.run;
+    return {
+      v: 1, savedAt: Date.now(), seed: this.seed, worldSeed: this.worldSeed, time: this.time,
+      player: { x: p.x, y: p.y, hp: p.hp, oil: p.oil, tallow: p.tallow, facing: p.facing, flashCd: p.flashCd, invuln: p.invuln },
+      focus: this.focus,
+      run: {
+        beacons: r.beacons.map(b => ({ x: b.x, y: b.y, radius: b.radius, income: b.income, age: b.age, pulse: b.pulse })),
+        relics: r.relics.map(x => x.id), discovered: [...r.discovered], slainKings: [...r.slainKings],
+        kills: r.kills, beaconsPlaced: r.beaconsPlaced, tidesSurvived: r.tidesSurvived,
+        kindlingEarned: r.kindlingEarned, springUsed: [...r.springUsed], darkSurvival: r.darkSurvival || 0,
+      },
+      tide: { phase: this.tide.phase, t: this.tide.t, warned: this.tide.warned },
+      dread: this.meta.dread || 0,
+    };
+  }
+
+  restoreRun(snap) {
+    if (typeof snap.seed === 'number') this.seed = snap.seed >>> 0;
+    this.worldSeed = (snap.worldSeed ?? this.seed) >>> 0;
+    // Dread governs how strong this saved world is, so it travels with the run slot.
+    if (Number.isFinite(snap.dread)) this.meta.dread = snap.dread;
+    this.rng = makeRng(this.worldSeed);
+    this.world = generateWorld(this.worldSeed);
+    this.light = new LightField(this.world);
+    this.fog = new Uint8Array(this.world.W * this.world.H);
+    this.particles = [];
+    this.buildRun();
+    const sr = snap.run || {}, r = this.run;
+    r.relics = (sr.relics || []).map(id => RELICS.find(x => x.id === id)).filter(Boolean);
+    r.beacons = (sr.beacons || []).map(b => Object.assign(makeBeacon(b.x, b.y),
+      { radius: b.radius, income: b.income, age: b.age || 0, pulse: b.pulse || 0 }));
+    r.discovered = new Set(sr.discovered || []);
+    r.slainKings = new Set(sr.slainKings || []);
+    r.springUsed = new Set(sr.springUsed || []);
+    for (const k of ['kills', 'beaconsPlaced', 'tidesSurvived', 'kindlingEarned', 'darkSurvival'])
+      if (typeof sr[k] === 'number') r[k] = sr[k];
+    // a King unmade this expedition stays unmade unless the crowns are already endless
+    if (!this.endlessKings()) r.mobs = r.mobs.filter(m => !(m.def.boss && r.slainKings.has(m.kind)));
+    const p = this.player, sp = snap.player || {};
+    for (const k of ['x', 'y', 'oil', 'tallow', 'facing', 'flashCd', 'invuln']) if (sp[k] !== undefined) p[k] = sp[k];
+    p.maxHp = this.maxHp;
+    p.hp = Math.min(p.maxHp, sp.hp ?? p.maxHp);
+    p.oil = Math.min(this.oilMax, p.oil);
+    this.focus = snap.focus || 'white';
+    if (snap.tide) Object.assign(this.tide, snap.tide);
+    this.time = snap.time || 0;
+    for (const d of r.discovered) {
+      const lm = this.world.landmarks.find(l => l.type + l.x + ',' + l.y === d);
+      if (lm) this.revealAround(lm.x, lm.y, 6);
+    }
+    this.revealAround(p.x, p.y, this.lightRadius);
+    this._lastOil = p.oil;
+    this.mode = 'play';
   }
 
   giveRandomRelic() {
@@ -561,6 +760,10 @@ export class Game {
     if (this.tideActive) burn *= (2 - this.lvl('tide_resist') * 0.12);
     if (this.focus === 'blue') burn *= 0.6;
     p.oil = Math.max(0, p.oil - burn * dt);
+    if (this._flareCd > 0) this._flareCd -= dt;
+    if (this._flareT > 0) this._flareT -= dt;
+    // any drain since last frame counts: burn, flash, beacon cost, oil-eating mobs
+    if ((this._lastOil ?? p.oil) > 0 && p.oil <= 0) this.deathflare();
 
     // beacon income (incremental heartbeat)
     let income = 0;
@@ -587,6 +790,7 @@ export class Game {
     const lr = p.oil > 0 ? this.lightRadius : 2;
     this.light.add(p.x, p.y, lr, 1);
     for (const b of this.run.beacons) this.light.add(b.x, b.y, b.radius, 0.9);
+    if (this._flareT > 0) this.light.add(p.x, p.y, 4, 1);
     if (this.inHub()) {
       this.light.add(this.world.hub.x, this.world.hub.y, this.world.hub.r + 4, 1);
       for (const bz of this.hubProps.braziers) this.light.add(bz.x, bz.y, 4.5, 0.9);
@@ -616,6 +820,9 @@ export class Game {
         this.sfx('flash');
       }
     }
+
+    this.trailTick(dt);
+    this.beaconDrumTick(dt);
 
     // fog reveal around player
     this.revealAround(p.x, p.y, lr);
@@ -691,11 +898,13 @@ export class Game {
         if (rq.t <= 0) {
           this.run.respawnQueue.splice(i, 1);
           if (Math.hypot(rq.x - p.x, rq.y - p.y) > 20) {
-            this.run.mobs.push(makeMob(rq.kind, rq.x, rq.y, rq.tier));
+            this.run.mobs.push(makeMob(rq.kind, rq.x, rq.y, rq.tier, this.dreadScale()));
           } else this.run.respawnQueue.push({ ...rq, t: 30 });
         }
       }
     }
+
+    this.updateKingQueue(dt);
 
     updateParticles(this, dt);
     // ambient embers drifting off the lantern
@@ -706,6 +915,7 @@ export class Game {
     for (const t of this.toasts) t.t += dt;
     this.toasts = this.toasts.filter(t => t.t < t.life);
     if (this.shake > 0) this.shake -= dt;
+    this._lastOil = p.oil;
   }
 
   _movePlayer(dx, dy) {

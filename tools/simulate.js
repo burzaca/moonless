@@ -52,13 +52,13 @@ export function simulate(seed, maxSeconds = 600, meta = null) {
   g.mode = 'play';
   const input = { left: false, right: false, up: false, down: false };
   const dt = 1 / 60;
-  let target = null, targetKey = null, targetNpc = null, targetDrop = null, altarVisit = false, npcTry = 0, wp = null, deaths = 0, t = 0, s = 0, lastUx = 0, lastUy = 0;
+  let target = null, targetKey = null, targetNpc = null, targetDrop = null, altarVisit = false, npcTry = 0, wp = null, deaths = 0, t = 0, s = 0, lastUx = 0, lastUy = 0, firstDeath = null;
   const stats = { survived: 0, deaths: 0 };
 
   while (t < maxSeconds && g.mode !== 'dawn') {
     t += dt; s++;
     if (g.mode === 'dead') {
-      deaths++; g.respawn(); wp = null;
+      deaths++; if (firstDeath == null) firstDeath = t; g.respawn(); wp = null;
       // after dying, spend Kindling at the altar like a player would
       const cheapest = UPGRADES_LIST.filter(u => g.lvl(u.id) < u.maxLevel)
         .map(u => ({ u, cost: Math.round(u.cost * Math.pow(u.costGrowth, g.lvl(u.id))) }))
@@ -203,7 +203,7 @@ export function simulate(seed, maxSeconds = 600, meta = null) {
     }
   }
   return {
-    survived: t, deaths,
+    survived: t, deaths, firstDeath,
     kills: g.run.kills, kindling: g.run.kindlingEarned,
     beacons: g.run.beaconsPlaced, landmarks: g.run.discovered.size,
     npcs: g.meta.npcsSaved.length, kings: g.meta.kingsSlain.length,

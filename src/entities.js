@@ -49,11 +49,13 @@ export function lineBlocked(world, x0, y0, x1, y1) {
 }
 
 // ---------- mobs ----------
-export function makeMob(kind, x, y, tier) {
+export function makeMob(kind, x, y, tier, scale) {
   const def = MOBS[kind];
+  // per-mob multipliers only — `def` is shared by every mob and must never be scaled in place
+  const hp = Math.round(def.hp * (scale?.hp ?? 1));
   return {
     id: nextId(), kind, def, x, y,
-    hp: def.hp, maxHp: def.hp,
+    hp, maxHp: hp, dmgMul: scale?.dmg ?? 1, spdMul: scale?.speed ?? 1,
     state: 'idle', t: Math.random() * 10, cd: 0, stagger: 0,
     wanderA: Math.random() * Math.PI * 2, wanderT: 0,
     aggro: false, hitFlash: 0, tier: tier ?? def.tier,
@@ -61,14 +63,14 @@ export function makeMob(kind, x, y, tier) {
   };
 }
 
-export function spawnMobsFromWorld(world, rng) {
+export function spawnMobsFromWorld(world, rng, scale) {
   const mobs = [];
   for (const s of world.mobSpawns) {
-    mobs.push(makeMob(s.kind, s.x + 0.5, s.y + 0.5, s.tier));
+    mobs.push(makeMob(s.kind, s.x + 0.5, s.y + 0.5, s.tier, scale));
     // denser dark: most spawn points carry a second thing, jittered nearby
     if (rng.next() < 0.6) {
       const jx = s.x + 0.5 + (rng.next() - 0.5) * 6, jy = s.y + 0.5 + (rng.next() - 0.5) * 6;
-      if (!tileSolid(world, Math.floor(jx), Math.floor(jy))) mobs.push(makeMob(s.kind, jx, jy, s.tier));
+      if (!tileSolid(world, Math.floor(jx), Math.floor(jy))) mobs.push(makeMob(s.kind, jx, jy, s.tier, scale));
     }
   }
   return mobs;
@@ -96,7 +98,7 @@ export function updateMob(m, dt, game) {
   }
 
   // light behavior
-  const slow = game.focusSlowMul ?? 1;
+  const slow = (game.focusSlowMul ?? 1) * (m.spdMul || 1) * (game.wardMul ? game.wardMul(m) : 1);
   if (def.behavior === 'drift') {
     // motes are drawn to light (moth-to-flame): approach player if player lit, burn anyway
     if (m.aggro && litHere < 0.85) approach(world, m, player, dt, def.speed * 0.8 * slow);
@@ -108,7 +110,8 @@ export function updateMob(m, dt, game) {
     const fearsLight = m.kind === 'stalker' && litHere > 0.55;
     if (fearsLight && !def.boss) {
       const ax = m.x - player.x, ay = m.y - player.y, l = Math.hypot(ax, ay) || 1;
-      moveCircle(world, m, (ax / l) * def.speed * dt, (ay / l) * def.speed * dt);
+      const fs = def.speed * (m.spdMul || 1);
+      moveCircle(world, m, (ax / l) * fs * dt, (ay / l) * fs * dt);
     } else if (m.aggro) {
       approach(world, m, player, dt, def.speed * slow);
     } else if (!def.boss && game.player.oil > 0 && !game.inHub() && d < sense * 2.5 &&
@@ -121,7 +124,7 @@ export function updateMob(m, dt, game) {
   // attack
   if (d < 0.75 && m.cd <= 0 && m.stagger <= 0) {
     m.cd = def.boss ? 2.0 : 1.0;
-    game.damagePlayer(def.dmg, m);
+    game.damagePlayer(def.dmg * (m.dmgMul || 1), m);
     if (def.drainsOil) game.drainOil(def.drainsOil);
   }
 }

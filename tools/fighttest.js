@@ -64,9 +64,10 @@ function steer(g, p, goal, lastU) {
            lastU: [bk[0] / Math.SQRT2, bk[1] / Math.SQRT2] };
 }
 
-function fight(kingKind, upgrades, relics, seed = 42) {
+function fight(kingKind, upgrades, relics, seed = 42, dread = 0) {
   const meta = defaultMeta();
   meta.upgrades = upgrades;
+  meta.dread = dread;
   const g = new Game(meta, seed);
   g.setEntities(entities);
   g.mode = 'play';
@@ -106,8 +107,9 @@ function fight(kingKind, upgrades, relics, seed = 42) {
     g.update(dt, input);
   }
   return {
-    king: kingKind, win: king.hp <= 0, playerAlive: p.hp > 0,
+    king: kingKind, dread, win: king.hp <= 0, playerAlive: p.hp > 0,
     kingHpLeft: Math.max(0, Math.round(king.hp)), pHp: Math.round(p.hp),
+    kingMaxHp: Math.round(king.maxHp),
     secs: Math.round(t), pOil: Math.round(p.oil),
   };
 }
@@ -117,8 +119,31 @@ const relics = [
   { id: 'iron_martenitsa', name: 'Iron Martenitsa', desc: '', effect: { maxHp: 25 } },
   { id: 'zmei_scale', name: 'Zmei Scale', desc: '', effect: { burnDps: 0.25 } },
 ];
-for (const k of ['king_stag', 'king_choir', 'king_hollow']) {
-  for (const seed of [42, 7, 99]) {
-    console.log(JSON.stringify(fight(k, mid, relics, seed)));
+
+// Same mid-tier build at every Dread level: the table is the difficulty curve the player feels.
+const argDreads = process.argv.slice(2).map(Number).filter(n => !isNaN(n));
+const dreads = argDreads.length ? argDreads : [0, 2, 4, 6];
+const kings = ['king_stag', 'king_choir', 'king_hollow'];
+const rows = [];
+for (const dread of dreads)
+  for (const k of kings)
+    for (const seed of [42, 7, 99])
+      rows.push(fight(k, mid, relics, seed, dread));
+
+if (process.env.MOON_JSON) rows.forEach(r => console.log(JSON.stringify(r)));
+
+const avg = (xs) => (xs.reduce((a, b) => a + b, 0) / xs.length);
+console.log('build: mid-tier (no new powers)   seeds: 42,7,99 per cell');
+console.log('dread  king          kingHP_avg  wins  playerHP_avg  secs_avg');
+for (const dread of dreads) {
+  for (const k of kings) {
+    const rs = rows.filter(r => r.dread === dread && r.king === k);
+    console.log(
+      `${String(dread).padEnd(6)} ${k.padEnd(13)} ` +
+      `${avg(rs.map(r => r.kingMaxHp)).toFixed(0).padStart(10)}  ` +
+      `${String(rs.filter(r => r.win).length).padStart(4)}  ` +
+      `${avg(rs.map(r => r.pHp)).toFixed(0).padStart(12)}  ` +
+      `${avg(rs.map(r => r.secs)).toFixed(0).padStart(9)}`
+    );
   }
 }

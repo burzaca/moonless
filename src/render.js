@@ -2,7 +2,9 @@
 
 import { T } from './rng.js';
 import { getSprite } from './sprites.js';
+import { roman } from './engine.js';
 import { UPGRADES, ACHIEVEMENTS } from './data.js';
+import { hasRunSave, loadRun } from './save.js';
 
 const S = 3;               // pixel scale
 const TS = 16 * S;         // tile size on screen
@@ -241,6 +243,13 @@ export class Renderer {
       if (m.def.boss || m.hp < m.maxHp) {
         const bw = m.def.boss ? 24 * S : 12 * S;
         const bx = (m.x - cam.x) * TS - bw / 2, by = (m.y - cam.y) * TS - (m.def.boss ? 20 : 12) * S;
+        if (m.def.boss) {
+          ctx.font = `${10 * S}px monospace`;
+          ctx.fillStyle = '#c86bff';
+          ctx.textAlign = 'center';
+          ctx.fillText(m.label || m.def.name, (m.x - cam.x) * TS, by - 8 * S);
+          ctx.textAlign = 'left';
+        }
         ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(bx, by, bw, 3 * S);
         ctx.fillStyle = m.def.boss ? '#c86bff' : '#e05b4e';
         ctx.fillRect(bx, by, bw * Math.max(0, m.hp / m.maxHp), 3 * S);
@@ -351,6 +360,7 @@ export class Renderer {
     // ---- menus / overlays ----
     if (g.ui.altar) this.drawAltarMenu();
     if (g.ui.merchant) this.drawMerchantMenu();
+    if (g.ui.menu) this.drawMenu();
     if (g.ui.help) this.drawHelp();
     if (g.ui.achievements) this.drawAchievements();
     if (g.mode === 'dead') this.drawDeath();
@@ -435,7 +445,9 @@ export class Renderer {
       ctx.restore();
       ctx.textAlign = 'left';
     }
-    ctx.fillText(`focus: ${g.focus.toUpperCase()}   kills ${g.run.kills}   ${g.meta.kingsSlain.length}/3 kings`, pad + 2, pad + 20 + bh + 48);
+    const dread = g.meta.dread || 0;
+    ctx.fillText(`focus: ${g.focus.toUpperCase()}   kills ${g.run.kills}   ${g.meta.kingsSlain.length}/3 kings` +
+      (dread > 0 ? `   dread ${roman(dread)}` : ''), pad + 2, pad + 20 + bh + 48);
     // tide clock
     const t = g.tide;
     const label = t.phase === 'calm' ? `tide in ${Math.ceil(t.t)}s` : `TIDE ${Math.ceil(t.t)}s`;
@@ -487,7 +499,11 @@ export class Renderer {
     ctx.fillStyle = '#a89f8a';
     ctx.fillText('carry the last light', W / 2, H * 0.34 + 34);
     ctx.fillStyle = `rgba(232,226,208,${0.5 + 0.5 * Math.sin(t * 3)})`;
-    ctx.fillText('press any key to wake', W / 2, H * 0.55);
+    ctx.fillText(hasRunSave() ? 'ENTER — continue the last expedition' : 'press any key to wake', W / 2, H * 0.55);
+    if (hasRunSave()) {
+      ctx.fillStyle = '#8a8577';
+      ctx.fillText('N — leave it and wake in a new world', W / 2, H * 0.55 + 24);
+    }
     ctx.fillStyle = '#6f6a5c';
     ctx.font = '12px monospace';
     ctx.fillText('WASD move · E interact · SPACE flash · B beacon · R render · Q focus · H help · P achievements · M map', W / 2, H * 0.62);
@@ -590,6 +606,43 @@ export class Renderer {
     ctx.fillText(`you carry: ${g.player.tallow} tallow`, x + 20, y + 160);
   }
 
+  drawMenu() {
+    const g = this.game, ctx = this.ctx;
+    const W = ctx.canvas.width;
+    const w = 560, h = 260, x = (W - w) / 2, y = 100;
+    this.panel(x, y, w, h);
+    ctx.fillStyle = '#ffd27a'; ctx.font = 'bold 16px monospace';
+    ctx.fillText('THE HOLLOW — SAVE / LOAD / RESET', x + 20, y + 28);
+    ctx.fillStyle = '#cfc8b8'; ctx.font = '13px monospace';
+    ctx.fillText('[1] save this expedition   [2] load the saved expedition   [3] reset all progress', x + 20, y + 52);
+    ctx.fillStyle = '#6f6a5c';
+    ctx.fillText('One save slot — saving replaces any existing save.', x + 20, y + 68);
+    let yy = y + 88;
+    const snap = hasRunSave() ? loadRun() : null;
+    if (snap) {
+      const d = new Date(snap.savedAt || 0);
+      const p2 = (n) => String(n).padStart(2, '0');
+      const hm = p2(d.getHours()) + ':' + p2(d.getMinutes());
+      const walked = Math.floor((snap.time || 0) / 60) + ':' + p2(Math.floor((snap.time || 0) % 60));
+      const dr = snap.dread || 0;                       // the danger of the SAVED world
+      const kings = (g.meta.kingsSlain || []).length;
+      ctx.fillText(`saved ${hm} · walked ${walked} · dread ${roman(dr)} · kings ${kings}/3 · kindling ${g.meta.kindling || 0}`, x + 20, yy);
+      yy += 22;
+    }
+    if (g.ui.menuConfirm) {
+      ctx.fillStyle = '#e07a6a';
+      ctx.fillText('Reset everything? Press [3] again to confirm.', x + 20, yy);
+      yy += 22;
+    }
+    if (g.ui.menuMsg) {
+      ctx.fillStyle = '#ffd27a';
+      ctx.fillText(g.ui.menuMsg, x + 20, yy);
+      yy += 22;
+    }
+    ctx.fillStyle = '#8a8577';
+    ctx.fillText('[ESC] close', x + 20, yy + 14);
+  }
+
   drawAchievements() {
     const ctx = this.ctx, W = ctx.canvas.width;
     const g = this.game;
@@ -624,7 +677,8 @@ export class Renderer {
       'R — render carried tallow into oil (at cauldron or lit beacon)',
       'Q — cycle lantern focus (unlock at the Altar):',
       '    WHITE steady · RED burns harder · BLUE slows the dark · GOLD uncovers caches',
-      'M — map   H — help   P — achievements   N — sound on/off   ESC — close',
+      'M — map   H — help   P — achievements   N — sound on/off',
+      'ESC — save / load / reset menu',
       '',
       'Your light burns Umbral things that touch it. Oil feeds the flame;',
       'the deep dark burns oil faster. At zero oil, the Umbral starts taking you.',

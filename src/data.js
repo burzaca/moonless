@@ -129,6 +129,31 @@ export const UPGRADES = [
     desc: 'POWER: the flash recovers 15% faster per level.',
     effect: { quickwick: 1 },
   },
+  {
+    id: 'ember_reaping', name: 'Ember Reaping', cost: 20, costGrowth: 1.7, maxLevel: 3,
+    desc: 'POWER: kills sometimes drop a spark of Kindling; Kings drop several',
+    effect: { reaping: 1 },
+  },
+  {
+    id: 'cinder_trail', name: 'Cinder Trail', cost: 24, costGrowth: 1.8, maxLevel: 3,
+    desc: 'POWER: your steps leave embers that burn and carry light',
+    effect: { trail: 1 },
+  },
+  {
+    id: 'beacon_drum', name: 'Beacon Drum', cost: 26, costGrowth: 1.8, maxLevel: 3,
+    desc: 'POWER: planted beacons pulse light damage outward',
+    effect: { drum: 1 },
+  },
+  {
+    id: 'ashen_ward', name: 'Ashen Ward', cost: 22, costGrowth: 1.7, maxLevel: 3,
+    desc: 'POWER: Umbral things slow down inside your light',
+    effect: { ward: 1 },
+  },
+  {
+    id: 'deathflare', name: 'Deathflare', cost: 28, costGrowth: 1.9, maxLevel: 3,
+    desc: 'POWER: when the oil runs out the lantern gives one last flare',
+    effect: { flare: 1 },
+  },
 ];
 
 export const NPCS = [
